@@ -8,50 +8,51 @@ import sys
 st.set_page_config(page_title="EmosiKu - AI Psychotherapy", layout="wide")
 
 def get_premium_ui():
-    index_path = "index.html"
-    assets_path = "assets"
-    
-    if not os.path.exists(index_path):
-        return "<h3>Error: File index.html tidak ditemukan.</h3>"
-    
-    with open(index_path, "r", encoding="utf-8") as f:
-        html_content = f.read()
-    
-    # Cari nama file JS dan CSS yang aktif
-    js_match = re.search(r'src="\./assets/(index-.*?\.js)"', html_content)
-    css_match = re.search(r'href="\./assets/(index-.*?\.css)"', html_content)
-    
-    if js_match and css_match:
-        js_file = js_match.group(1)
-        css_file = css_match.group(1)
+    try:
+        index_path = "index.html"
+        assets_path = "assets"
         
-        with open(os.path.join(assets_path, js_file), "r", encoding="utf-8") as f:
-            js_code = f.read()
-        with open(os.path.join(assets_path, css_file), "r", encoding="utf-8") as f:
-            css_code = f.read()
+        if not os.path.exists(index_path):
+            return "<h3>Error: File index.html tidak ditemukan.</h3>"
+        
+        with open(index_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
+        
+        # Cari file JS dan CSS apapun yang ada di folder assets
+        # Ini jauh lebih aman daripada mencari lewat regex di index.html
+        js_files = [f for f in os.listdir(assets_path) if f.endswith(".js") and f.startswith("index-")]
+        css_files = [f for f in os.listdir(assets_path) if f.endswith(".css") and f.startswith("index-")]
+        
+        if js_files and css_files:
+            # Ambil file yang paling baru (paling atas)
+            js_file = js_files[0]
+            css_file = css_files[0]
             
-        # PENTING: Gunakan .replace() biasa, JANGAN gunakan re.sub() untuk konten JS
-        # Karena JS mengandung banyak simbol \ yang bisa bikin error re.sub
+            with open(os.path.join(assets_path, js_file), "r", encoding="utf-8") as f:
+                js_code = f.read()
+            with open(os.path.join(assets_path, css_file), "r", encoding="utf-8") as f:
+                css_code = f.read()
+            
+            # Bersihkan index.html dari pemanggilan file eksternal agar tidak bentrok
+            html_content = re.sub(r'<script type="module" crossorigin src="\./assets/index-.*?\.js"></script>', '', html_content)
+            html_content = re.sub(r'<link rel="stylesheet" crossorigin href="\./assets/index-.*?\.css">', '', html_content)
+            
+            # Suntikkan kode asli secara langsung (Metode paling stabil)
+            final_html = html_content.replace('</head>', f'<style>{css_code}</style></head>')
+            final_html = final_html.replace('</body>', f'<script type="module">{js_code.replace("</script>", "<\\/script>")}</script></body>')
+            
+            return final_html
         
-        tag_js_lama = js_match.group(0) # Ini adalah: src="./assets/index-xxx.js"
-        tag_css_lama = css_match.group(0) # Ini adalah: href="./assets/index-xxx.css"
-        
-        # Kita buat tag baru yang berisi kode aslinya
-        # Kita pakai trick: ganti src dengan isi kodenya langsung
-        html_content = html_content.replace(f'type="module" crossorigin {tag_js_lama}', '')
-        html_content = html_content.replace(f'rel="stylesheet" crossorigin {tag_css_lama}', '')
-        
-        # Suntikkan kode asli di bagian akhir head dan body
-        html_content = html_content.replace('</head>', f'<style>{css_code}</style></head>')
-        html_content = html_content.replace('</body>', f'<script type="module">{js_code}</script></body>')
-        
-        return html_content
-    
-    return "<h3>Error: Aset gagal dipetakan.</h3>"
+        return f"<h3>Error: Aset tidak ditemukan di folder '{assets_path}'.</h3>"
+    except Exception as e:
+        return f"<h3>Terjadi kesalahan sistem: {str(e)}</h3>"
 
-# Tampilkan UI
+# Render
 premium_html = get_premium_ui()
-components.html(premium_html, height=1200, scrolling=True)
+if "<h3>" in premium_html:
+    st.error(premium_html)
+else:
+    components.html(premium_html, height=1200, scrolling=True)
 
 # Jalankan Mesin AI
 if 'api_started' not in st.session_state:
