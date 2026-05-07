@@ -18,7 +18,6 @@ interface ConsultationLog {
 export default function App() {
   const [consultationText, setConsultationText] = useState('');
   const [isAnalyzed, setIsAnalyzed] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState({
     status: '',
     sentiment: 'neutral' as 'positive' | 'neutral' | 'negative',
@@ -31,56 +30,34 @@ export default function App() {
 
   const [consultationLogs, setConsultationLogs] = useState<ConsultationLog[]>([]);
 
-  // --- KOMUNIKASI RESMI STREAMLIT ---
   useEffect(() => {
-    const Streamlit = (window as any).Streamlit;
-
-    const onRender = (event: any) => {
-      const data = event.detail.args.result;
-      if (data && data.status) {
-        setAnalysisResult(data);
-        setIsAnalyzed(true);
-        setIsAnalyzing(false);
-        setConsultationText(data.originalText || '');
-        
-        const newLog: ConsultationLog = {
-          id: Date.now().toString(),
-          time: new Date().toLocaleTimeString('id-ID'),
-          input: data.originalText || '',
-          status: data.status,
-          sentiment: data.sentiment,
-          confidence: data.clarity
-        };
-        setConsultationLogs(prev => [newLog, ...prev]);
-      }
+    // Tangkap hasil yang disuntikkan Python ke jendela utama
+    const result = (window as any).initialResult;
+    if (result && result.status) {
+      setAnalysisResult(result);
+      setIsAnalyzed(true);
+      setConsultationText(result.originalText || '');
       
-      if (Streamlit) {
-        Streamlit.setFrameHeight();
-      }
-    };
-
-    window.addEventListener('message', (event) => {
-      if (event.data.type === 'streamlit:render') {
-        onRender({ detail: { args: event.data.args } });
-      }
-    });
-
-    if (Streamlit) {
-      Streamlit.setComponentReady();
-      Streamlit.setFrameHeight();
+      const newLog: ConsultationLog = {
+        id: Date.now().toString(),
+        time: new Date().toLocaleTimeString('id-ID'),
+        input: result.originalText || '',
+        status: result.status,
+        sentiment: result.sentiment,
+        confidence: result.clarity
+      };
+      setConsultationLogs(prev => [newLog, ...prev]);
     }
   }, []);
 
   const handleAnalyze = () => {
     if (consultationText.trim()) {
-      setIsAnalyzing(true);
-      const Streamlit = (window as any).Streamlit;
-      if (Streamlit) {
-        Streamlit.setComponentValue({
-          action: 'analyze',
-          text: consultationText
-        });
-      }
+      // TEKNIK PINTU BELAKANG: Gunakan Link Rahasia untuk menembus blokade Cloud
+      const encodedText = encodeURIComponent(consultationText);
+      const link = document.createElement('a');
+      link.href = `./?analyze=${encodedText}`;
+      link.target = '_parent'; // Ini kunci untuk menembus Iframe
+      link.click();
     }
   };
 
@@ -116,13 +93,12 @@ export default function App() {
             
             <motion.button
               onClick={handleAnalyze}
-              disabled={isAnalyzing}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className="mt-6 relative group"
             >
               <div className="relative px-10 py-4 bg-gradient-to-r from-violet-600 to-cyan-600 rounded-2xl shadow-[0_0_40px_rgba(139,92,246,0.6)] text-white font-bold flex items-center gap-2">
-                {isAnalyzing ? "Menganalisis..." : <><Sparkles className="w-5 h-5" /> Analisis Kondisi Emosi</>}
+                <Sparkles className="w-5 h-5" /> Analisis Kondisi Emosi
               </div>
             </motion.button>
           </div>

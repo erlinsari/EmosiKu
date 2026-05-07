@@ -7,28 +7,20 @@ import json
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
 
-# 1. Konfigurasi Halaman (Tanpa Margin)
+# 1. Konfigurasi Halaman (Hapus Margin & Ruang Hitam)
 st.set_page_config(page_title="EmosiKu - AI Psychotherapy", layout="wide", initial_sidebar_state="collapsed")
 
-# CSS untuk mematikan padding Streamlit agar dashboard memenuhi layar
+# Suntikan CSS ke Jendela Utama Streamlit
 st.markdown("""
 <style>
     .block-container { padding: 0 !important; max-width: 100% !important; }
-    iframe { border: none !important; }
+    [data-testid="stAppViewContainer"] { background: white !important; }
+    iframe { border: none !important; width: 100% !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# 2. Deklarasi Komponen (Jalur Absolut)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-BUILD_DIR = os.path.join(BASE_DIR, "frontend", "dist")
-
-# Pastikan folder build ada
-if not os.path.exists(os.path.join(BUILD_DIR, "index.html")):
-    st.error(f"FATAL: Folder 'dist' tidak ditemukan di {BUILD_DIR}. Pastikan Anda sudah menjalankan 'npm run build'.")
-    st.stop()
-
-# Aktifkan Jalur Dua Arah (Resmi)
-render_emosiku = components.declare_component("emosiku", path=BUILD_DIR)
+DIST_DIR = os.path.join(BASE_DIR, "frontend", "dist")
 
 @st.cache_resource
 def load_ai_engine():
@@ -60,15 +52,44 @@ def analyze_emotion(text):
         "originalText": text
     }
 
-if 'last_result' not in st.session_state:
-    st.session_state.last_result = None
+def get_premium_ui(result=None):
+    index_path = os.path.join(DIST_DIR, "index.html")
+    assets_dir = os.path.join(DIST_DIR, "assets")
+    
+    with open(index_path, "r", encoding="utf-8") as f:
+        html_content = f.read()
+    
+    js_files = [f for f in os.listdir(assets_dir) if f.endswith(".js")]
+    css_files = [f for f in os.listdir(assets_dir) if f.endswith(".css")]
+    
+    result_json = json.dumps(result) if result else "null"
+    injection = f'<script>window.initialResult = {result_json};</script>'
+    
+    with open(os.path.join(assets_dir, js_files[0]), "r", encoding="utf-8") as f:
+        js_code = f.read()
+    with open(os.path.join(assets_dir, css_files[0]), "r", encoding="utf-8") as f:
+        css_code = f.read()
+    
+    final_html = html_content.replace('<head>', f'<head>{injection}')
+    final_html = final_html.replace('</head>', f'<style>{css_code}</style></head>')
+    final_html = final_html.replace('</body>', f'<script type="module">{js_code.replace("</script>", "<\\/script>")}</script></body>')
+    return final_html
 
-# 3. Jalankan Dashboard (React Asli)
-# Kirim hasil terakhir ke React via props
-data_from_react = render_emosiku(result=st.session_state.last_result, key="emosiku_final")
-
-# 4. Tangkap Sinyal Analisis dari Tombol React
-if data_from_react and data_from_react.get('action') == 'analyze':
-    with st.spinner("AI sedang menganalisis..."):
-        st.session_state.last_result = analyze_emotion(data_from_react.get('text'))
+# --- PENERIMA ANALISIS ---
+query_params = st.query_params
+if "analyze" in query_params:
+    text_to_analyze = query_params["analyze"]
+    st.query_params.clear()
+    with st.spinner("Sedang menganalisis emosi Anda..."):
+        st.session_state.current_result = analyze_emotion(text_to_analyze)
         st.rerun()
+
+if 'current_result' not in st.session_state:
+    st.session_state.current_result = None
+
+# --- TAMPILKAN DASHBOARD ---
+premium_html = get_premium_ui(st.session_state.current_result)
+st.session_state.current_result = None
+
+# Gunakan components.html (BUKAN declare_component) agar desain PASTI muncul
+components.html(premium_html, height=1200, scrolling=True)
