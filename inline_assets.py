@@ -1,12 +1,24 @@
 import os
 
-dist = 'web'
+# Ambil dari folder build asli
+dist = os.path.join('frontend', 'dist')
 assets = os.path.join(dist, 'assets')
-html_path = os.path.join(dist, 'index.html')
+output_dir = 'web'
+output_html = os.path.join(output_dir, 'index.html')
+
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
 
 # Cari file terbaru
-js_file = [f for f in os.listdir(assets) if f.endswith('.js')][0]
-css_file = [f for f in os.listdir(assets) if f.endswith('.css')][0]
+js_files = [f for f in os.listdir(assets) if f.endswith('.js')]
+css_files = [f for f in os.listdir(assets) if f.endswith('.css')]
+
+if not js_files or not css_files:
+    print("Error: File build tidak ditemukan!")
+    exit(1)
+
+js_file = js_files[0]
+css_file = css_files[0]
 
 print(f"Menggabungkan {js_file} dan {css_file}...")
 
@@ -34,7 +46,7 @@ new_html = f"""<!DOCTYPE html>
 </body>
 </html>"""
 
-with open(html_path, 'w', encoding='utf-8') as f:
+with open(output_html, 'w', encoding='utf-8') as f:
     f.write(new_html)
 
-print("Berhasil menggabungkan ke web/index.html!")
+print(f"Berhasil menggabungkan ke {output_html}!")
