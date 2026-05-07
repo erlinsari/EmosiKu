@@ -1,67 +1,53 @@
 import streamlit as st
-import streamlit.components.v1 as components
+import os
 import subprocess
 
 st.set_page_config(page_title="EmosiKu - AI Psychotherapy", layout="wide")
+
+# Background Dasar
 st.markdown("<style>.stApp {background-color: #0f172a;}</style>", unsafe_allow_html=True)
 
-def main():
-    # URL ASET (jsDelivr dengan versi terbaru agar tidak cache)
-    # Kita tambahkan timestamp agar browser selalu mengambil yang paling baru
-    js_url = "https://cdn.jsdelivr.net/gh/erlinsari/EmosiKu/assets/index-BBJjsgNE.js"
-    css_url = "https://cdn.jsdelivr.net/gh/erlinsari/EmosiKu/assets/index-eQS-I5Sh.css"
+def render_ui():
+    assets_path = "assets"
     
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8" />
-        <link rel="stylesheet" crossorigin href="{css_url}">
-        <style>
-            html, body, #root {{ height: 100%; margin: 0; padding: 0; background: #ffffff; }}
-            #error-log {{ 
-                position: fixed; bottom: 0; left: 0; width: 100%; 
-                background: #fee2e2; color: #991b1b; padding: 10px; 
-                font-family: monospace; font-size: 12px; z-index: 9999;
-                display: none; border-top: 2px solid #ef4444;
-            }}
-        </style>
-    </head>
-    <body>
-        <div id="root">
-            <div style="padding: 50px; text-align: center; color: #64748b; font-family: sans-serif;">
-                <h2>🚀 Menyambungkan ke Desain EmosiKu...</h2>
-                <p>Jika layar tetap seperti ini lebih dari 10 detik, berarti ada kendala koneksi.</p>
-            </div>
-        </div>
-        <div id="error-log"></div>
+    # Cari file
+    js_file = next((f for f in os.listdir(assets_path) if f.startswith("index-") and f.endswith(".js")), None)
+    css_file = next((f for f in os.listdir(assets_path) if f.startswith("index-") and f.endswith(".css")), None)
+    
+    if js_file and css_file:
+        with open(os.path.join(assets_path, js_file), "r", encoding="utf-8") as f:
+            js_code = f.read()
+        with open(os.path.join(assets_path, css_file), "r", encoding="utf-8") as f:
+            css_code = f.read()
 
-        <script>
-            // SISTEM PELACAK ERROR
-            const log = document.getElementById('error-log');
-            window.onerror = function(msg, url, line) {{
-                log.style.display = 'block';
-                log.innerHTML += '❌ ERROR: ' + msg + ' (Line: ' + line + ')<br>';
-            }};
-
-            console.error = (function(old) {{
-                return function(msg) {{
-                    log.style.display = 'block';
-                    log.innerHTML += '⚠️ CONSOLE: ' + msg + '<br>';
-                    old.apply(console, arguments);
-                }};
-            }})(console.error);
-        </script>
+        # Kita gunakan manual Iframe dengan srcdoc
+        # Kita bungkus CSS dan JS secara murni tanpa link luar sama sekali
+        html_code = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8" />
+            <style>{css_code}</style>
+        </head>
+        <body>
+            <div id="root"></div>
+            <script type="module">{js_code}</script>
+        </body>
+        </html>
+        """
         
-        <script type="module" crossorigin src="{js_url}"></script>
-    </body>
-    </html>
-    """
-    
-    components.html(html_content, height=1200, scrolling=True)
+        # Gunakan st.write dengan unsafe_allow_html untuk memaksa Iframe muncul
+        # Ini adalah cara paling "kasar" tapi paling ampuh jika sistem komponen diblokir
+        st.write(
+            f'<iframe srcdoc="{html_code.replace('"', '&quot;')}" width="100%" height="1500" style="border:none; background:white;"></iframe>',
+            unsafe_allow_html=True
+        )
+    else:
+        st.error("Aset desain tidak ditemukan. Harap hubungi admin.")
 
-main()
+render_ui()
 
+# Jalankan API
 if 'api_started' not in st.session_state:
     try:
         subprocess.Popen(["python", "api.py"])
