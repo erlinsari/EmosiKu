@@ -48,7 +48,9 @@ def get_premium_ui():
     css_match = re.search(r'href="\./assets/(index-.*?\.css)"', html_content)
     
     if js_match and css_match:
+        js_tag = js_match.group(0)
         js_file = js_match.group(1)
+        css_tag = css_match.group(0)
         css_file = css_match.group(1)
         
         with open(os.path.join(dist_path, "assets", js_file), "r", encoding="utf-8") as f:
@@ -56,11 +58,9 @@ def get_premium_ui():
         with open(os.path.join(dist_path, "assets", css_file), "r", encoding="utf-8") as f:
             css_code = f.read()
             
-        # Ganti tag script dan link dengan kode aslinya (Inlining)
-        html_content = re.sub(r'<script type="module" crossorigin src="\./assets/index-.*?\.js"></script>', 
-                              f'<script type="module">{js_code}</script>', html_content)
-        html_content = re.sub(r'<link rel="stylesheet" crossorigin href="\./assets/index-.*?\.css">', 
-                              f'<style>{css_code}</style>', html_content)
+        # Gunakan replace biasa agar tidak error dengan karakter spesial di JS
+        html_content = html_content.replace(js_tag, f'<script type="module">{js_code}</script>')
+        html_content = html_content.replace(css_tag, f'<style>{css_code}</style>')
     
     return html_content
 
