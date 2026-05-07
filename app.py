@@ -2,6 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import os
 import re
+import base64
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
@@ -23,10 +24,7 @@ tokenizer, model, stopword_remover = load_nlp_model()
 
 # --- BAGIAN 2: JALANKAN API BACKEND ---
 if 'api_process' not in st.session_state:
-    try:
-        st.session_state.api_process = subprocess.Popen(["python", "api.py"])
-    except:
-        pass # Fallback jika python tidak ditemukan (biasanya python3 di linux)
+    st.session_state.api_process = subprocess.Popen(["python", "api.py"])
     time.sleep(3)
 
 # --- BAGIAN 3: SERVE TAMPILAN PREMIUM ---
@@ -35,36 +33,54 @@ def get_premium_ui():
     index_path = os.path.join(dist_path, "index.html")
     
     if not os.path.exists(index_path):
-        return "<h3 style='color: white;'>Error: Folder dist tidak ditemukan. Harap jalankan build.</h3>"
+        return "<h3>Error: Folder dist tidak ditemukan.</h3>"
     
     with open(index_path, "r", encoding="utf-8") as f:
         html_content = f.read()
     
-    # Mencari file JS dan CSS dengan regex yang lebih fleksibel
-    js_match = re.search(r'<script .*?src="\./assets/(index-.*?\.js)".*?></script>', html_content)
-    css_match = re.search(r'<link .*?href="\./assets/(index-.*?\.css)".*?>', html_content)
+    # Deteksi file JS dan CSS
+    js_match = re.search(r'src="\./assets/(index-.*?\.js)"', html_content)
+    css_match = re.search(r'href="\./assets/(index-.*?\.css)"', html_content)
     
     if js_match and css_match:
-        js_tag = js_match.group(0)
         js_file = js_match.group(1)
-        css_tag = css_match.group(0)
         css_file = css_match.group(1)
         
-        with open(os.path.join(dist_path, "assets", js_file), "r", encoding="utf-8") as f:
-            js_code = f.read().replace('</script>', '<\/script>') # Escape script tag
-        with open(os.path.join(dist_path, "assets", css_file), "r", encoding="utf-8") as f:
-            css_code = f.read()
+        # Baca file asli
+        with open(os.path.join(dist_path, "assets", js_file), "rb") as f:
+            js_base64 = base64.b64encode(f.read()).decode()
+        with open(os.path.join(dist_path, "assets", css_file), "rb") as f:
+            css_base64 = base64.b64encode(f.read()).decode()
             
-        # Injeksi dengan metode yang lebih aman
-        new_js = f'<script type="module">\n{js_code}\n</script>'
-        new_css = f'<style>\n{css_code}\n</style>'
-        
-        html_content = html_content.replace(js_tag, new_js)
-        html_content = html_content.replace(css_tag, new_css)
-    else:
-        return "<h3 style='color: white;'>Error: Gagal mendeteksi aset di index.html.</h3>"
+        # Konstruksi HTML baru yang bersih
+        # Kita hapus tag asli dan buat tag baru di bagian head
+        final_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>EmosiKu</title>
+            <style>
+                html, body, #root {{ height: 100%; margin: 0; padding: 0; background: #f8fafc; }}
+            </style>
+            <style type="text/css">
+                /* CSS Terinjeksi */
+                {base64.b64decode(css_base64).decode('utf-8', errors='ignore')}
+            </style>
+        </head>
+        <body>
+            <div id="root"></div>
+            <script type="module">
+                /* JS Terinjeksi */
+                {base64.b64decode(js_base64).decode('utf-8', errors='ignore')}
+            </script>
+        </body>
+        </html>
+        """
+        return final_html
     
-    return html_content
+    return "<h3>Error: Gagal memetakan aset.</h3>"
 
 # Tampilkan UI
 st.markdown("""
@@ -72,10 +88,9 @@ st.markdown("""
         .stApp { background: #0f172a; margin: 0; padding: 0; }
         iframe { border: none !important; width: 100%; min-height: 100vh; }
         header { display: none !important; }
-        .stMain { padding: 0 !important; }
+        footer { display: none !important; }
     </style>
 """, unsafe_allow_html=True)
 
-with st.spinner("Memuat Tampilan EmosiKu..."):
-    premium_html = get_premium_ui()
-    components.html(premium_html, height=1200, scrolling=True)
+premium_html = get_premium_ui()
+components.html(premium_html, height=1500, scrolling=True)
