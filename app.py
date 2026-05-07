@@ -8,16 +8,53 @@ import glob
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
 
-# 1. Konfigurasi Halaman (Hapus Margin & Ruang Hitam)
-st.set_page_config(page_title="EmosiKu - AI Psychotherapy", layout="wide", initial_sidebar_state="collapsed")
+# 1. Konfigurasi Halaman (Hapus Margin Streamlit)
+st.set_page_config(page_title="EmosiKu - AI Assistant", layout="wide", initial_sidebar_state="collapsed")
 
-# Suntikan CSS ke Jendela Utama Streamlit
+# --- SUNTIKAN CSS KAMUFLASE (Menyamakan Elemen Asli dengan Desain Premium) ---
 st.markdown("""
 <style>
-    /* Tambahkan padding atas agar judul tidak terpotong */
-    .block-container { padding: 4rem 0 0 0 !important; max-width: 100% !important; }
-    [data-testid="stAppViewContainer"] { background: white !important; }
-    iframe { border: none !important; width: 100% !important; }
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+    
+    .block-container { padding: 0 !important; max-width: 100% !important; }
+    
+    /* KAMUFLASE KOTAK KETIK */
+    .stTextArea textarea {
+        background: rgba(255, 255, 255, 0.4) !important;
+        backdrop-filter: blur(10px) !important;
+        border: 1px solid rgba(139, 92, 246, 0.2) !important;
+        border-radius: 20px !important;
+        padding: 1.5rem !important;
+        font-family: 'Outfit', sans-serif !important;
+        font-size: 1.1rem !important;
+        color: #1e293b !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.02) !important;
+    }
+    
+    /* KAMUFLASE TOMBOL ANALISIS (IDENTIK DENGAN DESAIN REACT) */
+    .stButton button {
+        background: linear-gradient(90deg, #7c3aed 0%, #0891b2 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 15px !important;
+        padding: 0.8rem 2.5rem !important;
+        font-weight: 700 !important;
+        font-family: 'Outfit', sans-serif !important;
+        font-size: 1.1rem !important;
+        box-shadow: 0 10px 40px rgba(139,92,246,0.4) !important;
+        transition: all 0.3s ease !important;
+        width: 100% !important;
+        max-width: 350px;
+        margin-top: -50px; /* Posisi Tombol agar pas */
+    }
+    
+    .stButton button:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 15px 50px rgba(139,92,246,0.5) !important;
+    }
+
+    /* Hilangkan Label Streamlit agar Bersih */
+    [data-testid="stWidgetLabel"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -58,21 +95,16 @@ def get_premium_ui(result=None):
     try:
         index_path = os.path.join(DIST_DIR, "index.html")
         assets_dir = os.path.join(DIST_DIR, "assets")
-        
         with open(index_path, "r", encoding="utf-8") as f:
             html_content = f.read()
-        
         js_files = glob.glob(os.path.join(assets_dir, "*.js"))
         css_files = glob.glob(os.path.join(assets_dir, "*.css"))
-        
         result_json = json.dumps(result) if result else "null"
         injection = f'<script>window.initialResult = {result_json};</script>'
-        
         with open(js_files[0], "r", encoding="utf-8") as f:
             js_code = f.read()
         with open(css_files[0], "r", encoding="utf-8") as f:
             css_code = f.read()
-        
         final_html = html_content.replace('<head>', f'<head>{injection}')
         final_html = final_html.replace('</head>', f'<style>{css_code}</style></head>')
         final_html = final_html.replace('</body>', f'<script type="module">{js_code.replace("</script>", "<\\/script>")}</script></body>')
@@ -80,20 +112,21 @@ def get_premium_ui(result=None):
     except Exception as e:
         return f"<h3>Error: {str(e)}</h3>"
 
-# --- PENERIMA ANALISIS ---
-query_params = st.query_params
-if "analyze" in query_params:
-    text_to_analyze = query_params["analyze"]
-    st.query_params.clear()
-    with st.spinner("🧠 AI sedang menganalisis perasaan Anda..."):
-        st.session_state.current_result = analyze_emotion(text_to_analyze)
-        st.rerun()
+# --- TAMPILKAN HEADER & SIDEBAR PREMIUM (DI ATAS) ---
+if 'result' not in st.session_state:
+    st.session_state.result = None
 
-if 'current_result' not in st.session_state:
-    st.session_state.current_result = None
+# 1. Tampilkan Dashboard (Hanya Header, Sidebar, dan Hasil)
+premium_html = get_premium_ui(st.session_state.result)
+components.html(premium_html, height=1100)
 
-# --- TAMPILKAN DASHBOARD PREMIUM ---
-premium_html = get_premium_ui(st.session_state.current_result)
-st.session_state.current_result = None
-
-components.html(premium_html, height=1500, scrolling=True)
+# 2. Sisipkan Elemen Interaktif (PAS DI POSISI KOTAK KETIK DESAIN)
+# Kita taruh di container agar posisinya pas
+st.markdown("<div style='margin-top: -720px; padding: 0 420px;'>", unsafe_allow_html=True)
+user_text = st.text_area("input", placeholder="Ekspresikan perasaan Anda di sini...", height=200)
+if st.button("✨ Analisis Kondisi Emosi"):
+    if user_text.strip():
+        with st.spinner("Brain AI menganalisis..."):
+            st.session_state.result = analyze_emotion(user_text)
+            st.rerun()
+st.markdown("</div>", unsafe_allow_html=True)
