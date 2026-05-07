@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Sparkles, Clock, Zap, Brain } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
@@ -29,40 +29,49 @@ export default function App() {
     energy: 0
   });
 
-  const [consultationLogs] = useState<ConsultationLog[]>([]);
+  const [consultationLogs, setConsultationLogs] = useState<ConsultationLog[]>([]);
+
+  // Sistem Penerima Data dari Streamlit
+  useEffect(() => {
+    // Cek apakah ada hasil yang disuntikkan langsung oleh Streamlit
+    const initialResult = (window as any).initialResult;
+    if (initialResult) {
+      setAnalysisResult(initialResult);
+      setIsAnalyzed(true);
+      setIsAnalyzing(false);
+      
+      const newLog: ConsultationLog = {
+        id: Date.now().toString(),
+        time: new Date().toLocaleTimeString('id-ID'),
+        input: initialResult.originalText || '',
+        status: initialResult.status,
+        sentiment: initialResult.sentiment,
+        confidence: initialResult.clarity
+      };
+      setConsultationLogs(prev => [newLog, ...prev]);
+      // Bersihkan agar tidak muncul terus saat refresh
+      delete (window as any).initialResult;
+    }
+
+    const onRender = (event: any) => {
+      // ... existing listener code if needed ...
+    };
+    // ...
+  }, []);
 
   const handleAnalyze = async () => {
     if (consultationText.trim()) {
       setIsAnalyzing(true);
-      try {
-        const response = await fetch('http://localhost:8000/predict', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: consultationText })
+      // Kirim data langsung ke Streamlit (bukan ke localhost)
+      const Streamlit = (window as any).Streamlit;
+      if (Streamlit) {
+        Streamlit.setComponentValue({
+          action: 'analyze',
+          text: consultationText
         });
-        
-        const data = await response.json();
-        
-        {/* Hasil Analisis */}
-        const isStable = data.prediction === 0;
-        
-        setAnalysisResult({
-          status: isStable ? 'Kondisi Stabil' : 'Terindikasi Gangguan Psikologis',
-          sentiment: isStable ? 'positive' : 'negative',
-          description: isStable 
-            ? 'Pola emosi Anda memancarkan keseimbangan dan energi positif. Tidak terdeteksi indikasi gangguan mental yang signifikan. Pertahankan kesehatan mental Anda.'
-            : 'AI kami mendeteksi pola dalam bahasa Anda yang mungkin mengindikasikan kecemasan atau beban emosional yang berat. Sangat disarankan untuk berbagi perasaan ini dengan profesional atau teman terpercaya.',
-          wellness: Math.round(data.probabilities.stable * 100),
-          stress: Math.round(data.probabilities.anxiety * 100),
-          clarity: Math.round(data.confidence * 100),
-          energy: isStable ? 85 : 45
-        });
-
-        setIsAnalyzed(true);
-      } catch (error) {
-        console.error("Gagal melakukan analisis:", error);
-        alert("Gagal menghubungi server AI. Pastikan api.py sudah dijalankan.");
-      } finally {
+      } else {
+        // Fallback jika dijalankan di luar Streamlit
+        console.warn("Streamlit tidak terdeteksi.");
         setIsAnalyzing(false);
       }
     }
