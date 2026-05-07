@@ -13,7 +13,7 @@ const moodData = [
   { value: 75 }
 ];
 
-export function Sidebar({ name = 'Pengguna', sessionCount = 0 }: { name?: string | null, sessionCount?: number }) {
+export function Sidebar() {
   return (
     <div className="w-80 h-screen fixed left-0 top-0 p-6 space-y-6 overflow-y-auto">
       {/* Logo */}
@@ -34,42 +34,39 @@ export function Sidebar({ name = 'Pengguna', sessionCount = 0 }: { name?: string
         </h1>
       </motion.div>
 
-      {/* Profile Card */}
+      {/* App Branding */}
+      <div className="mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-cyan-600 flex items-center justify-center shadow-lg shadow-violet-200">
+            <Sparkles className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800 tracking-tight" style={{ fontFamily: 'Clash Display, sans-serif' }}>
+              EmosiKu
+            </h2>
+            <p className="text-slate-500 text-xs font-medium uppercase tracking-widest">AI Mental Health</p>
+          </div>
+        </div>
+      </div>
+
       <GlassPanel glow>
         <div className="p-6 space-y-4">
-          <div className="flex items-center gap-4">
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="relative"
-            >
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500 p-0.5">
-                <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-2xl">
-                  👤
-                </div>
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-white shadow-[0_0_10px_rgba(52,211,153,0.6)]" />
-            </motion.div>
-            <div>
-              <h3 className="text-slate-800 font-semibold">{name || 'Pengguna'}</h3>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-200">
+          <div className="grid grid-cols-3 gap-3">
             <div className="text-center">
               <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-                {sessionCount}
+                0
               </div>
               <div className="text-xs text-slate-500">Sesi</div>
             </div>
             <div className="text-center">
               <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-                {sessionCount > 0 ? '89%' : '0%'}
+                0%
               </div>
               <div className="text-xs text-slate-500">Kesehatan</div>
             </div>
             <div className="text-center">
               <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-                {Math.floor(sessionCount / 2)}
+                0
               </div>
               <div className="text-xs text-slate-500">Pencapaian</div>
             </div>
@@ -131,7 +128,7 @@ export function Sidebar({ name = 'Pengguna', sessionCount = 0 }: { name?: string
             </div>
             <div className="flex-1">
               <div className="text-sm text-slate-500">Sesi Terakhir</div>
-              <div className="text-slate-800 font-semibold">2 jam yang lalu</div>
+              <div className="text-slate-800 font-semibold">-</div>
             </div>
           </div>
 
@@ -141,7 +138,7 @@ export function Sidebar({ name = 'Pengguna', sessionCount = 0 }: { name?: string
             </div>
             <div className="flex-1">
               <div className="text-sm text-slate-500">Pencapaian</div>
-              <div className="text-slate-800 font-semibold">8 Terbuka</div>
+              <div className="text-slate-800 font-semibold">0 Terbuka</div>
             </div>
           </div>
         </div>

@@ -3,71 +3,70 @@ import streamlit.components.v1 as components
 import os
 import re
 import torch
+import base64
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
+import subprocess
 import time
 
-st.set_page_config(page_title="EmosiKu", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="EmosiKu - AI Psychotherapy", layout="wide")
 
-# --- AI LOGIC ---
+# --- BAGIAN 1: LOGIKA AI ---
 @st.cache_resource
-def load_nlp():
-    m = "indobenchmark/indobert-base-p1"
-    tok = AutoTokenizer.from_pretrained(m)
-    mod = AutoModelForSequenceClassification.from_pretrained(m, num_labels=2)
-    sw = StopWordRemoverFactory().create_stop_word_remover()
-    return tok, mod, sw
+def load_nlp_model():
+    model_name = "indobenchmark/indobert-base-p1"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
+    stopword_remover = StopWordRemoverFactory().create_stop_word_remover()
+    return tokenizer, model, stopword_remover
 
-tokenizer, model, stopword_remover = load_nlp()
+tokenizer, model, stopword_remover = load_nlp_model()
 
-def get_prediction(text):
-    clean = re.sub(r'[^a-zA-Z\s]', '', text).lower()
-    clean = stopword_remover.remove(clean)
-    inputs = tokenizer(clean, return_tensors="pt", truncation=True, max_length=128)
-    with torch.no_grad():
-        out = model(**inputs)
-        probs = torch.nn.functional.softmax(out.logits, dim=-1)
-        pred = torch.argmax(probs, dim=-1).item()
-        conf = torch.max(probs).item()
-    is_s = pred == 0
-    return {
-        "id": str(int(time.time())),
-        "status": "Kondisi Stabil" if is_s else "Terindikasi Gangguan",
-        "sentiment": "positive" if is_s else "negative",
-        "description": "Pola emosi Anda memancarkan keseimbangan dan energi positif." if is_s else "AI mendeteksi pola yang mungkin mengindikasikan beban emosional.",
-        "wellness": int(probs[0][0].item() * 100),
-        "stress": int(probs[0][1].item() * 100),
-        "clarity": int(conf * 100),
-        "energy": 85 if is_s else 45,
-        "lastInput": text
-    }
+# --- BAGIAN 2: JALANKAN API BACKEND ---
+if 'api_process' not in st.session_state:
+    st.session_state.api_process = subprocess.Popen(["python", "api.py"])
+    time.sleep(3)
 
-# --- UI COMPONENT ---
-parent_dir = os.path.dirname(os.path.abspath(__file__))
-build_dir = os.path.join(parent_dir, "web")
-
-if not os.path.exists(build_dir):
-    st.error("Gagal memuat tampilan premium.")
-else:
-    # Komponen Premium Versi Super Ringan
-    ui_premium = components.declare_component("emosiku_premium_ultra_light", path=build_dir)
+# --- BAGIAN 3: SERVE TAMPILAN PREMIUM (Metode Base64 Safe) ---
+def get_premium_ui():
+    dist_path = "frontend/dist"
+    index_path = os.path.join(dist_path, "index.html")
     
-    if "result" not in st.session_state:
-        st.session_state.result = {"status": "Menunggu Analisis"}
+    if not os.path.exists(index_path):
+        return "<h3>Error: Folder dist tidak ditemukan.</h3>"
+    
+    with open(index_path, "r", encoding="utf-8") as f:
+        html_content = f.read()
+    
+    # Cari file JS dan CSS
+    js_match = re.search(r'src="\./assets/(index-.*?\.js)"', html_content)
+    css_match = re.search(r'href="\./assets/(index-.*?\.css)"', html_content)
+    
+    if js_match and css_match:
+        js_file = js_match.group(1)
+        css_file = css_match.group(1)
+        
+        # Baca dan Encode ke Base64 agar aman dari karakter spesial
+        with open(os.path.join(dist_path, "assets", js_file), "rb") as f:
+            js_base64 = base64.b64encode(f.read()).decode()
+        with open(os.path.join(dist_path, "assets", css_file), "rb") as f:
+            css_base64 = base64.b64encode(f.read()).decode()
+            
+        # Ganti tag dengan Data URI (Teknik Paling Aman)
+        html_content = re.sub(r'<script type="module" crossorigin src="\./assets/index-.*?\.js"></script>', 
+                              f'<script type="module" src="data:text/javascript;base64,{js_base64}"></script>', html_content)
+        html_content = re.sub(r'<link rel="stylesheet" crossorigin href="\./assets/index-.*?\.css">', 
+                              f'<link rel="stylesheet" href="data:text/css;base64,{css_base64}">', html_content)
+    
+    return html_content
 
-    st.markdown("""<style>
-        .stApp { margin: 0; padding: 0; background: #f0f4ff; }
-        iframe { border: none !important; width: 100%; height: 100vh; }
-        header { visibility: hidden; }
-        footer { visibility: hidden; }
-    </style>""", unsafe_allow_html=True)
+# Tampilkan UI
+st.markdown("""
+    <style>
+        .stApp { margin: 0; padding: 0; }
+        iframe { border: none !important; width: 100%; }
+    </style>
+""", unsafe_allow_html=True)
 
-    # Render
-    response = ui_premium(result=st.session_state.result)
-
-    # Logic
-    if response and response.get("action") == "analyze":
-        text = response.get("text")
-        if text:
-            st.session_state.result = get_prediction(text)
-            st.rerun()
+premium_html = get_premium_ui()
+components.html(premium_html, height=1200, scrolling=True)
