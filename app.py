@@ -23,7 +23,10 @@ tokenizer, model, stopword_remover = load_nlp_model()
 
 # --- BAGIAN 2: JALANKAN API BACKEND ---
 if 'api_process' not in st.session_state:
-    st.session_state.api_process = subprocess.Popen(["python", "api.py"])
+    try:
+        st.session_state.api_process = subprocess.Popen(["python", "api.py"])
+    except:
+        pass # Fallback jika python tidak ditemukan (biasanya python3 di linux)
     time.sleep(3)
 
 # --- BAGIAN 3: SERVE TAMPILAN PREMIUM ---
@@ -32,14 +35,14 @@ def get_premium_ui():
     index_path = os.path.join(dist_path, "index.html")
     
     if not os.path.exists(index_path):
-        return "<h3>Error: Folder dist tidak ditemukan.</h3>"
+        return "<h3 style='color: white;'>Error: Folder dist tidak ditemukan. Harap jalankan build.</h3>"
     
     with open(index_path, "r", encoding="utf-8") as f:
         html_content = f.read()
     
-    # Cari file JS dan CSS
-    js_match = re.search(r'<script type="module" crossorigin src="\./assets/(index-.*?\.js)"></script>', html_content)
-    css_match = re.search(r'<link rel="stylesheet" crossorigin href="\./assets/(index-.*?\.css)">', html_content)
+    # Mencari file JS dan CSS dengan regex yang lebih fleksibel
+    js_match = re.search(r'<script .*?src="\./assets/(index-.*?\.js)".*?></script>', html_content)
+    css_match = re.search(r'<link .*?href="\./assets/(index-.*?\.css)".*?>', html_content)
     
     if js_match and css_match:
         js_tag = js_match.group(0)
@@ -48,24 +51,31 @@ def get_premium_ui():
         css_file = css_match.group(1)
         
         with open(os.path.join(dist_path, "assets", js_file), "r", encoding="utf-8") as f:
-            js_code = f.read()
+            js_code = f.read().replace('</script>', '<\/script>') # Escape script tag
         with open(os.path.join(dist_path, "assets", css_file), "r", encoding="utf-8") as f:
             css_code = f.read()
             
-        # Injeksi langsung dengan pembungkus yang aman
-        html_content = html_content.replace(js_tag, f'<script type="module">\n{js_code}\n</script>')
-        html_content = html_content.replace(css_tag, f'<style>\n{css_code}\n</style>')
+        # Injeksi dengan metode yang lebih aman
+        new_js = f'<script type="module">\n{js_code}\n</script>'
+        new_css = f'<style>\n{css_code}\n</style>'
+        
+        html_content = html_content.replace(js_tag, new_js)
+        html_content = html_content.replace(css_tag, new_css)
+    else:
+        return "<h3 style='color: white;'>Error: Gagal mendeteksi aset di index.html.</h3>"
     
     return html_content
 
 # Tampilkan UI
 st.markdown("""
     <style>
-        .stApp { margin: 0; padding: 0; }
-        iframe { border: none !important; width: 100%; }
+        .stApp { background: #0f172a; margin: 0; padding: 0; }
+        iframe { border: none !important; width: 100%; min-height: 100vh; }
         header { display: none !important; }
+        .stMain { padding: 0 !important; }
     </style>
 """, unsafe_allow_html=True)
 
-premium_html = get_premium_ui()
-components.html(premium_html, height=1200, scrolling=True)
+with st.spinner("Memuat Tampilan EmosiKu..."):
+    premium_html = get_premium_ui()
+    components.html(premium_html, height=1200, scrolling=True)
