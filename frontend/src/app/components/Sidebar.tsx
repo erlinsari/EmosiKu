@@ -35,19 +35,21 @@ export function Sidebar() {
       </motion.div>
 
       {/* App Branding */}
-      <div className="p-8 border-b border-slate-200">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-cyan-600 flex items-center justify-center shadow-lg shadow-violet-200">
-            <Sparkles className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800 tracking-tight" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-              EmosiKu
-            </h2>
-            <p className="text-slate-500 text-xs font-medium uppercase tracking-widest">AI Mental Health</p>
+      <GlassPanel glow>
+        <div className="p-8">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-cyan-600 flex items-center justify-center shadow-lg shadow-violet-200">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800 tracking-tight" style={{ fontFamily: 'Clash Display, sans-serif' }}>
+                EmosiKu
+              </h2>
+              <p className="text-slate-500 text-xs font-medium uppercase tracking-widest">AI Mental Health</p>
+            </div>
           </div>
         </div>
-      </div>
+      </GlassPanel>
 
       <GlassPanel glow>
         <div className="p-6">
