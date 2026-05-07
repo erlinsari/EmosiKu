@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Sparkles, Clock, Zap, Brain } from 'lucide-react';
+import { Sparkles, Brain } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { GlassPanel } from './components/GlassPanel';
 import { MoodAvatar } from './components/MoodAvatar';
@@ -18,7 +18,6 @@ interface ConsultationLog {
 export default function App() {
   const [consultationText, setConsultationText] = useState('');
   const [isAnalyzed, setIsAnalyzed] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState({
     status: '',
     sentiment: 'neutral' as 'positive' | 'neutral' | 'negative',
@@ -32,12 +31,10 @@ export default function App() {
   const [consultationLogs, setConsultationLogs] = useState<ConsultationLog[]>([]);
 
   useEffect(() => {
-    // Tangkap hasil dari suntikan Python
     const result = (window as any).initialResult;
     if (result && result.status) {
       setAnalysisResult(result);
       setIsAnalyzed(true);
-      setIsAnalyzing(false);
       setConsultationText(result.originalText || '');
       
       const newLog: ConsultationLog = {
@@ -51,15 +48,6 @@ export default function App() {
       setConsultationLogs(prev => [newLog, ...prev]);
     }
   }, []);
-
-  const handleAnalyze = () => {
-    if (consultationText.trim()) {
-      setIsAnalyzing(true);
-      // Teknik Bridge: Kirim teks lewat URL ke Streamlit
-      const encodedText = encodeURIComponent(consultationText);
-      window.parent.location.href = window.parent.location.pathname + "?analyze=" + encodedText;
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative overflow-hidden">
@@ -78,29 +66,32 @@ export default function App() {
         </motion.div>
 
         <GlassPanel glow className="mb-8">
-          <div className="p-8">
+          <form action="./" target="_top" method="GET" className="p-8">
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="w-5 h-5 text-violet-600" />
               <label className="text-slate-800 font-semibold">Konsultasi</label>
             </div>
+            
+            {/* Input Tersembunyi agar Streamlit bisa membaca */}
             <textarea
+              name="analyze"
               value={consultationText}
               onChange={(e) => setConsultationText(e.target.value)}
               placeholder="Ekspresikan diri Anda secara bebas..."
               className="w-full h-40 bg-white/60 border border-violet-200 rounded-2xl px-6 py-4 text-slate-800 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-300/30 resize-none backdrop-blur-sm transition-all"
             />
+            
             <motion.button
-              onClick={handleAnalyze}
-              disabled={isAnalyzing}
+              type="submit"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className="mt-6 relative group"
             >
               <div className="relative px-10 py-4 bg-gradient-to-r from-violet-600 to-cyan-600 rounded-2xl shadow-[0_0_40px_rgba(139,92,246,0.6)] text-white font-bold flex items-center gap-2">
-                {isAnalyzing ? "Menganalisis..." : <><Sparkles className="w-5 h-5" /> Analisis Kondisi Emosi</>}
+                <Sparkles className="w-5 h-5" /> Analisis Kondisi Emosi
               </div>
             </motion.button>
-          </div>
+          </form>
         </GlassPanel>
 
         {isAnalyzed && (
