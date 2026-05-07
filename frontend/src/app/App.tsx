@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
+import { Streamlit } from "streamlit-component-lib";
 import { Sparkles, Clock, Zap, Brain, User } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { GlassPanel } from './components/GlassPanel';
@@ -49,7 +50,44 @@ export default function App() {
     if (savedLogs) {
       setConsultationLogs(JSON.parse(savedLogs));
     }
+
+    // Beritahu Streamlit bahwa komponen sudah siap
+    Streamlit.setFrameHeight();
   }, []);
+
+  // Mendengarkan hasil dari Python (Streamlit)
+  useEffect(() => {
+    const onRender = (event: any) => {
+      const { data } = event;
+      if (data.type === "streamlit:render") {
+        const { result } = data.args;
+        if (result && result.status !== 'Menunggu Analisis') {
+          setAnalysisResult(result);
+          setIsAnalyzed(true);
+          setIsAnalyzing(false);
+          
+          // Tambahkan ke log jika ini adalah hasil baru (confidence berbeda)
+          const isNew = !consultationLogs.some(log => log.id === result.id);
+          if (isNew && result.id) {
+            const newLog: ConsultationLog = {
+              id: result.id,
+              time: 'Baru saja',
+              input: result.lastInput,
+              status: result.status,
+              sentiment: result.sentiment,
+              confidence: result.clarity
+            };
+            const updatedLogs = [newLog, ...consultationLogs];
+            setConsultationLogs(updatedLogs);
+            localStorage.setItem('emosiku_logs', JSON.stringify(updatedLogs));
+          }
+        }
+      }
+    };
+    window.addEventListener("message", onRender);
+    Streamlit.setFrameHeight();
+    return () => window.removeEventListener("message", onRender);
+  }, [consultationLogs]);
 
   const handleSaveName = () => {
     if (tempName.trim()) {
@@ -62,50 +100,15 @@ export default function App() {
   const handleAnalyze = async () => {
     if (consultationText.trim()) {
       setIsAnalyzing(true);
-      try {
-        const response = await fetch('http://localhost:8000/predict', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: consultationText })
-        });
-        
-        const data = await response.json();
-        
-        {/* Hasil Analisis */}
-        const isStable = data.prediction === 0;
-        
-        const newLog: ConsultationLog = {
-          id: Date.now().toString(),
-          time: 'Baru saja',
-          input: consultationText,
-          status: isStable ? 'Kondisi Stabil' : 'Terindikasi Gangguan',
-          sentiment: isStable ? 'positive' : 'negative',
-          confidence: Math.round(data.confidence * 100)
-        };
+      
+      // Kirim teks ke Python (Streamlit)
+      Streamlit.setComponentValue({
+        action: 'analyze',
+        text: consultationText
+      });
 
-        const updatedLogs = [newLog, ...consultationLogs];
-        setConsultationLogs(updatedLogs);
-        localStorage.setItem('emosiku_logs', JSON.stringify(updatedLogs));
-
-        setAnalysisResult({
-          status: isStable ? 'Kondisi Stabil' : 'Terindikasi Gangguan',
-          sentiment: isStable ? 'positive' : 'negative',
-          description: isStable 
-            ? 'Pola emosi Anda memancarkan keseimbangan dan energi positif. Tidak terdeteksi indikasi gangguan mental yang signifikan. Pertahankan kesehatan mental Anda.'
-            : 'AI kami mendeteksi pola dalam bahasa Anda yang mungkin mengindikasikan kecemasan atau beban emosional yang berat. Sangat disarankan untuk berbagi perasaan ini dengan profesional atau teman terpercaya.',
-          wellness: Math.round(data.probabilities.stable * 100),
-          stress: Math.round(data.probabilities.anxiety * 100),
-          clarity: Math.round(data.confidence * 100),
-          energy: isStable ? 85 : 45
-        });
-
-        setIsAnalyzed(true);
-      } catch (error) {
-        console.error("Gagal melakukan analisis:", error);
-        alert("Gagal menghubungi server AI. Pastikan api.py sudah dijalankan.");
-      } finally {
-        setIsAnalyzing(false);
-      }
+      // Simulasi loading singkat (Hasil asli akan dikirim balik oleh Python)
+      // Kita akan memantau kembalian dari Python di bagian useEffect atau via props
     }
   };
 
