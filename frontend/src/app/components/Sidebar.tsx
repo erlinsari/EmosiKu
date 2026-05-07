@@ -34,45 +34,44 @@ export function Sidebar() {
         </h1>
       </motion.div>
 
-      {/* App Branding */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-cyan-600 flex items-center justify-center shadow-lg shadow-violet-200">
-            <Sparkles className="w-6 h-6 text-white" />
-          </div>
+      {/* Profile Header */}
+      <div className="p-8 border-b border-slate-200">
+        <div className="flex items-center gap-4 mb-6">
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            className="relative"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-100 to-cyan-100 flex items-center justify-center border-2 border-white shadow-xl">
+              <span className="text-2xl">👩‍⚕️</span>
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-white shadow-[0_0_10px_rgba(52,211,153,0.6)]" />
+          </motion.div>
           <div>
-            <h2 className="text-2xl font-bold text-slate-800 tracking-tight" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-              EmosiKu
-            </h2>
-            <p className="text-slate-500 text-xs font-medium uppercase tracking-widest">AI Mental Health</p>
+            <h3 className="text-slate-800 font-semibold">Sarah Mitchell</h3>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-200">
+          <div className="text-center">
+            <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
+              127
+            </div>
+            <div className="text-xs text-slate-500">Sesi</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
+              89%
+            </div>
+            <div className="text-xs text-slate-500">Kesehatan</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
+              42
+            </div>
+            <div className="text-xs text-slate-500">Pencapaian</div>
           </div>
         </div>
       </div>
-
-      <GlassPanel glow>
-        <div className="p-6 space-y-4">
-          <div className="grid grid-cols-3 gap-3">
-            <div className="text-center">
-              <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-                0
-              </div>
-              <div className="text-xs text-slate-500">Sesi</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-                0%
-              </div>
-              <div className="text-xs text-slate-500">Kesehatan</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-                0
-              </div>
-              <div className="text-xs text-slate-500">Pencapaian</div>
-            </div>
-          </div>
-        </div>
-      </GlassPanel>
 
       {/* Mood Journey */}
       <GlassPanel>
