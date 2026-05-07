@@ -9,12 +9,6 @@ from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFacto
 
 st.set_page_config(page_title="EmosiKu - AI Psychotherapy", layout="wide")
 
-# 1. Deklarasikan Jalur Dua Arah (Custom Component)
-parent_dir = os.path.dirname(os.path.abspath(__file__))
-build_dir = os.path.join(parent_dir, "frontend/dist")
-# Gunakan declare_component agar React bisa mengirim balik data ke Python
-render_emosiku = components.declare_component("emosiku", path=build_dir)
-
 @st.cache_resource
 def load_ai_engine():
     MODEL_NAME = "indobenchmark/indobert-base-p1"
@@ -27,15 +21,12 @@ def analyze_emotion(text):
     tokenizer, model, stopword_remover = load_ai_engine()
     text = re.sub(r'http\S+|[^a-zA-Z\s]', '', str(text)).lower()
     cleaned = stopword_remover.remove(text).strip()
-    
     inputs = tokenizer(cleaned, return_tensors="pt", truncation=True, padding=True, max_length=128)
     with torch.no_grad():
         out = model(**inputs)
-    
     probs = torch.softmax(out.logits, dim=-1)[0]
     pred = torch.argmax(out.logits, dim=-1).item()
     is_stable = pred == 0
-    
     return {
         "status": 'Kondisi Stabil' if is_stable else 'Terindikasi Gangguan Psikologis',
         "sentiment": 'positive' if is_stable else 'negative',
@@ -48,18 +39,44 @@ def analyze_emotion(text):
         "originalText": text
     }
 
-# Logika Utama
-if 'last_result' not in st.session_state:
-    st.session_state.last_result = None
+def get_premium_ui(result=None):
+    dist_path = "frontend/dist"
+    index_path = os.path.join(dist_path, "index.html")
+    assets_path = os.path.join(dist_path, "assets")
+    
+    with open(index_path, "r", encoding="utf-8") as f:
+        html_content = f.read()
+    
+    js_files = [f for f in os.listdir(assets_path) if f.endswith(".js")]
+    css_files = [f for f in os.listdir(assets_path) if f.endswith(".css")]
+    
+    result_json = json.dumps(result) if result else "null"
+    injection = f'<script>window.initialResult = {result_json};</script>'
+    
+    with open(os.path.join(assets_path, js_files[0]), "r", encoding="utf-8") as f:
+        js_code = f.read()
+    with open(os.path.join(assets_path, css_files[0]), "r", encoding="utf-8") as f:
+        css_code = f.read()
+    
+    final_html = html_content.replace('<head>', f'<head>{injection}')
+    final_html = final_html.replace('</head>', f'<style>{css_code}</style></head>')
+    final_html = final_html.replace('</body>', f'<script type="module">{js_code.replace("</script>", "<\\/script>")}</script></body>')
+    return final_html
 
-# Tampilkan Komponen (Sekarang sudah Dua Arah)
-# Kita kirim hasil terakhir sebagai "result" ke React
-data_from_react = render_emosiku(result=st.session_state.last_result, key="emosiku_main")
+# Inisialisasi State
+if 'current_result' not in st.session_state:
+    st.session_state.current_result = None
 
-# Jika ada data masuk dari React (artinya tombol diklik)
-if data_from_react and data_from_react.get('action') == 'analyze':
-    text_to_analyze = data_from_react.get('text')
-    if text_to_analyze:
-        with st.spinner("Sedang menganalisis emosi Anda..."):
-            st.session_state.last_result = analyze_emotion(text_to_analyze)
-            st.rerun()
+# 1. Tampilkan Dashboard Mewah
+premium_html = get_premium_ui(st.session_state.current_result)
+components.html(premium_html, height=850, scrolling=True)
+
+# 2. Input Curhat Asli Streamlit (Berada di Bawah Dashboard)
+st.markdown("---")
+st.subheader("📝 Bagikan Pikiran Anda")
+user_input = st.chat_input("Tuliskan perasaan atau pikiran Anda di sini...")
+
+if user_input:
+    with st.spinner("AI sedang menganalisis emosi Anda..."):
+        st.session_state.current_result = analyze_emotion(user_input)
+        st.rerun()
