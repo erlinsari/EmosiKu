@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Sparkles, Clock, Zap, Brain, User } from 'lucide-react';
+import { Sparkles, Clock, Zap, Brain } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { GlassPanel } from './components/GlassPanel';
 import { MoodAvatar } from './components/MoodAvatar';
@@ -17,10 +17,6 @@ interface ConsultationLog {
 
 export default function App() {
   const [consultationText, setConsultationText] = useState('');
-  const [userName, setUserName] = useState<string | null>(null);
-  const [showWelcome, setShowWelcome] = useState(false);
-  const [tempName, setTempName] = useState('');
-  
   const [isAnalyzed, setIsAnalyzed] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState({
@@ -35,7 +31,7 @@ export default function App() {
 
   const [consultationLogs, setConsultationLogs] = useState<ConsultationLog[]>([]);
 
-  // Fungsi kirim data ke Streamlit (Versi Ringan)
+  // Fungsi kirim data ke Streamlit
   const sendToStreamlit = (data: any) => {
     window.parent.postMessage({
       isStreamlitMessage: true,
@@ -44,31 +40,14 @@ export default function App() {
     }, "*");
   };
 
-  // Load data dari LocalStorage saat pertama kali buka
   useEffect(() => {
-    const savedName = localStorage.getItem('emosiku_user_name');
-    const savedLogs = localStorage.getItem('emosiku_logs');
-    
-    if (savedName) {
-      setUserName(savedName);
-    } else {
-      setShowWelcome(true);
-    }
-    
-    if (savedLogs) {
-      setConsultationLogs(JSON.parse(savedLogs));
-    }
-
     // Beritahu Streamlit tinggi frame
     window.parent.postMessage({
       isStreamlitMessage: true,
       type: "streamlit:setFrameHeight",
       height: document.body.scrollHeight
     }, "*");
-  }, []);
 
-  // Mendengarkan hasil dari Python (Streamlit)
-  useEffect(() => {
     const onMessage = (event: any) => {
       const data = event.data;
       if (data.type === "streamlit:render") {
@@ -78,36 +57,28 @@ export default function App() {
           setIsAnalyzed(true);
           setIsAnalyzing(false);
           
-          const isNew = !consultationLogs.some(log => log.id === result.id);
-          if (isNew && result.id) {
-            const newLog: ConsultationLog = {
-              id: result.id,
-              time: 'Baru saja',
-              input: result.lastInput,
-              status: result.status,
-              sentiment: result.sentiment,
-              confidence: result.clarity
-            };
-            const updatedLogs = [newLog, ...consultationLogs];
-            setConsultationLogs(updatedLogs);
-            localStorage.setItem('emosiku_logs', JSON.stringify(updatedLogs));
-          }
+          setConsultationLogs(prev => {
+            const isNew = !prev.some(log => log.id === result.id);
+            if (isNew && result.id) {
+              return [{
+                id: result.id,
+                time: 'Baru saja',
+                input: result.lastInput,
+                status: result.status,
+                sentiment: result.sentiment,
+                confidence: result.clarity
+              }, ...prev];
+            }
+            return prev;
+          });
         }
       }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [consultationLogs]);
+  }, []);
 
-  const handleSaveName = () => {
-    if (tempName.trim()) {
-      localStorage.setItem('emosiku_user_name', tempName);
-      setUserName(tempName);
-      setShowWelcome(false);
-    }
-  };
-
-  const handleAnalyze = async () => {
+  const handleAnalyze = () => {
     if (consultationText.trim()) {
       setIsAnalyzing(true);
       sendToStreamlit({
@@ -119,309 +90,84 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative overflow-hidden">
-      {/* Welcome Modal */}
-      {showWelcome && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md">
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-3xl p-8 shadow-2xl max-w-md w-full border border-white/20"
-          >
-            <div className="w-16 h-16 bg-violet-100 rounded-2xl flex items-center justify-center mb-6">
-              <User className="w-8 h-8 text-violet-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-800 mb-2" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-              Selamat Datang di EmosiKu
-            </h2>
-            <p className="text-slate-600 mb-6">
-              Boleh kami tahu siapa nama Anda agar pengalaman konsultasi terasa lebih personal?
-            </p>
-            <input 
-              type="text"
-              value={tempName}
-              onChange={(e) => setTempName(e.target.value)}
-              placeholder="Masukkan nama Anda..."
-              className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-violet-400 mb-6"
-            />
-            <button 
-              onClick={handleSaveName}
-              className="w-full py-4 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-violet-200 hover:shadow-violet-300 transition-all"
-            >
-              Mulai Konsultasi
-            </button>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.4, 0.6, 0.4]
-          }}
-          transition={{ duration: 8, repeat: Infinity }}
-          className="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-to-br from-violet-200/40 to-cyan-200/40 rounded-full blur-3xl"
-        />
-        <motion.div
-          animate={{
-            scale: [1.2, 1, 1.2],
-            opacity: [0.3, 0.5, 0.3]
-          }}
-          transition={{ duration: 10, repeat: Infinity }}
-          className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-gradient-to-tr from-pink-200/30 to-purple-200/30 rounded-full blur-3xl"
-        />
-      </div>
-
       {/* Sidebar */}
-      <Sidebar name={userName} sessionCount={consultationLogs.length} />
+      <Sidebar name="Pengguna" sessionCount={consultationLogs.length} />
 
       {/* Main Content */}
       <div className="ml-80 p-8 relative z-10">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <h2 className="text-4xl font-bold text-slate-800 mb-2" style={{ fontFamily: 'Clash Display, sans-serif' }}>
             Analisis Kesehatan Mental AI
           </h2>
           <p className="text-slate-600">Bagikan pikiran Anda dan biarkan AI kami memberikan wawasan</p>
         </motion.div>
 
-        {/* Input Konsultasi */}
         <GlassPanel glow className="mb-8">
           <div className="p-8">
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="w-5 h-5 text-violet-600" />
               <label className="text-slate-800 font-semibold">Konsultasi</label>
             </div>
-
             <textarea
               value={consultationText}
               onChange={(e) => setConsultationText(e.target.value)}
-              placeholder="Ekspresikan diri Anda secara bebas... Bagikan pikiran, perasaan, kekhawatiran, atau apa pun yang ada di pikiran Anda. AI kami akan menganalisis kondisi emosional Anda."
-              className="w-full h-40 bg-white/60 border border-violet-200 rounded-2xl px-6 py-4 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-300/30 resize-none backdrop-blur-sm transition-all"
+              placeholder="Ekspresikan diri Anda secara bebas..."
+              className="w-full h-40 bg-white/60 border border-violet-200 rounded-2xl px-6 py-4 text-slate-800 focus:outline-none focus:border-violet-400 resize-none transition-all"
             />
-
-            {/* Tombol Analisis 3D */}
-            <motion.button
-              onClick={handleAnalyze}
-              disabled={isAnalyzing}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="mt-6 relative group"
-            >
-              <motion.div
-                animate={isAnalyzing ? { scale: [1, 1.05, 1] } : {}}
-                transition={{ duration: 1, repeat: Infinity }}
-                className="relative px-10 py-4 bg-gradient-to-r from-violet-600 via-purple-600 to-cyan-600 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(139,92,246,0.6)]"
-              >
-                {/* Shimmer effect */}
-                <motion.div
-                  animate={{ x: [-200, 200] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
-                />
-
-                <span className="relative z-10 text-white font-bold flex items-center gap-2" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-                  {isAnalyzing ? (
-                    <>
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                      >
-                        <Zap className="w-5 h-5" />
-                      </motion.div>
-                      Menganalisis...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-5 h-5" />
-                      Analisis Kondisi Emosi
-                    </>
-                  )}
+            <motion.button onClick={handleAnalyze} disabled={isAnalyzing} whileHover={{ scale: 1.02 }} className="mt-6 relative group">
+              <div className="px-10 py-4 bg-gradient-to-r from-violet-600 via-purple-600 to-cyan-600 rounded-2xl shadow-lg">
+                <span className="text-white font-bold flex items-center gap-2">
+                  {isAnalyzing ? "Menganalisis..." : "Analisis Kondisi Emosi"}
                 </span>
-              </motion.div>
-
-              {/* Glow effect */}
-              <div className="absolute -inset-1 bg-gradient-to-r from-violet-600 to-cyan-600 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity -z-10" />
+              </div>
             </motion.button>
           </div>
         </GlassPanel>
 
-        {/* Analysis Results */}
         {isAnalyzed && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="space-y-8"
-          >
-            {/* Main Result Card */}
-            <GlassPanel>
-              <div className="p-8">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
-                  {/* Status Info */}
-                  <div className="lg:col-span-2 space-y-4">
-                    <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.2 }}
-                    >
-                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 border border-emerald-300 rounded-full mb-4">
-                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                        <span className="text-emerald-700 text-sm font-semibold">Analisis AI Selesai</span>
-                      </div>
-
-                      <h3 className="text-3xl font-bold text-slate-800 mb-4" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-                        {analysisResult.status}
-                      </h3>
-
-                      <p className="text-slate-600 leading-relaxed">
-                        {analysisResult.description}
-                      </p>
-
-                      <div className="flex items-center gap-4 mt-6 pt-6 border-t border-slate-200">
-                        <div className="flex items-center gap-2">
-                          <Brain className="w-4 h-4 text-violet-600" />
-                          <span className="text-sm text-slate-500">Keyakinan AI:</span>
-                          <span className="text-slate-800 font-semibold">{analysisResult.clarity}%</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-cyan-600" />
-                          <span className="text-sm text-slate-500">Dianalisis dalam 1.2 detik</span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  </div>
-
-                  {/* 3D Avatar */}
-                  <div className="flex justify-center">
-                    <MoodAvatar sentiment={analysisResult.sentiment} />
-                  </div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+            <GlassPanel className="p-8">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+                <div className="lg:col-span-2 space-y-4">
+                  <h3 className="text-3xl font-bold text-slate-800">{analysisResult.status}</h3>
+                  <p className="text-slate-600 leading-relaxed">{analysisResult.description}</p>
+                </div>
+                <div className="flex justify-center">
+                  <MoodAvatar sentiment={analysisResult.sentiment} />
                 </div>
               </div>
             </GlassPanel>
-
-            {/* Holographic Mood Rings */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-              <GlassPanel className="p-6 flex justify-center">
-                <CircularProgress
-                  value={analysisResult.wellness}
-                  color="url(#wellness-gradient)"
-                  label="Kesejahteraan"
-                  icon={<Sparkles className="w-6 h-6 text-emerald-400" />}
-                />
-                <svg width="0" height="0">
-                  <defs>
-                    <linearGradient id="wellness-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#10b981" />
-                      <stop offset="100%" stopColor="#06b6d4" />
-                    </linearGradient>
-                  </defs>
-                </svg>
+              <GlassPanel className="p-6 text-center">
+                <CircularProgress value={analysisResult.wellness} label="Wellness" />
               </GlassPanel>
-
-              <GlassPanel className="p-6 flex justify-center">
-                <CircularProgress
-                  value={100 - analysisResult.stress}
-                  color="url(#calm-gradient)"
-                  label="Ketenangan"
-                  icon={<span className="text-2xl">🧘</span>}
-                />
-                <svg width="0" height="0">
-                  <defs>
-                    <linearGradient id="calm-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#8b5cf6" />
-                      <stop offset="100%" stopColor="#ec4899" />
-                    </linearGradient>
-                  </defs>
-                </svg>
+              <GlassPanel className="p-6 text-center">
+                <CircularProgress value={100 - analysisResult.stress} label="Ketenangan" />
               </GlassPanel>
-
-              <GlassPanel className="p-6 flex justify-center">
-                <CircularProgress
-                  value={analysisResult.clarity}
-                  color="url(#clarity-gradient)"
-                  label="Kejelasan"
-                  icon={<span className="text-2xl">💎</span>}
-                />
-                <svg width="0" height="0">
-                  <defs>
-                    <linearGradient id="clarity-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#06b6d4" />
-                      <stop offset="100%" stopColor="#3b82f6" />
-                    </linearGradient>
-                  </defs>
-                </svg>
+              <GlassPanel className="p-6 text-center">
+                <CircularProgress value={analysisResult.clarity} label="Kejelasan" />
               </GlassPanel>
-
-              <GlassPanel className="p-6 flex justify-center">
-                <CircularProgress
-                  value={analysisResult.energy}
-                  color="url(#energy-gradient)"
-                  label="Energi"
-                  icon={<Zap className="w-6 h-6 text-yellow-400" />}
-                />
-                <svg width="0" height="0">
-                  <defs>
-                    <linearGradient id="energy-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#f59e0b" />
-                      <stop offset="100%" stopColor="#ef4444" />
-                    </linearGradient>
-                  </defs>
-                </svg>
+              <GlassPanel className="p-6 text-center">
+                <CircularProgress value={analysisResult.energy} label="Energi" />
               </GlassPanel>
             </div>
           </motion.div>
         )}
 
-        {/* Consultation History - Premium Cards */}
         <div className="mt-8">
-          <h3 className="text-2xl font-bold text-slate-800 mb-6" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-            Sesi Terakhir
-          </h3>
-
+          <h3 className="text-2xl font-bold text-slate-800 mb-6">Sesi Terakhir</h3>
           <div className="space-y-4">
             {consultationLogs.length === 0 ? (
-              <div className="text-center py-10 text-slate-400">
-                Belum ada riwayat sesi. Mulailah konsultasi pertama Anda!
-              </div>
+              <div className="text-center py-10 text-slate-400">Belum ada riwayat sesi.</div>
             ) : (
               consultationLogs.map((log) => (
-                <GlassPanel key={log.id} hoverable className="p-6">
-                  <div className="flex flex-col md:flex-row gap-6">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          log.sentiment === 'positive' ? 'bg-emerald-100' : 'bg-rose-100'
-                        }`}>
-                          {log.sentiment === 'positive' ? (
-                            <span className="text-2xl">😊</span>
-                          ) : (
-                            <span className="text-2xl">😔</span>
-                          )}
-                        </div>
-                        <div>
-                          <h4 className="text-slate-800 font-bold">{log.status}</h4>
-                          <p className="text-xs text-slate-500">{log.time}</p>
-                        </div>
-                      </div>
-                      <p className="text-slate-600 text-sm line-clamp-2 italic">
-                        "{log.input}"
-                      </p>
+                <GlassPanel key={log.id} className="p-6">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-bold text-slate-800">{log.status}</h4>
+                      <p className="text-sm text-slate-500 italic">"{log.input}"</p>
                     </div>
-
-                    <div className="flex items-center gap-6">
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-                          {log.confidence}%
-                        </div>
-                        <div className="text-xs text-slate-500">Keyakinan</div>
-                      </div>
-                    </div>
+                    <div className="text-xl font-bold text-slate-800">{log.confidence}%</div>
                   </div>
                 </GlassPanel>
               ))
