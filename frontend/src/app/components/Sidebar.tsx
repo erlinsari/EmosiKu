@@ -13,7 +13,7 @@ const moodData = [
   { value: 75 }
 ];
 
-export function Sidebar() {
+export function Sidebar({ name = 'Pengguna', sessionCount = 0 }: { name?: string | null, sessionCount?: number }) {
   return (
     <div className="w-80 h-screen fixed left-0 top-0 p-6 space-y-6 overflow-y-auto">
       {/* Logo */}
@@ -50,26 +50,26 @@ export function Sidebar() {
               <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-white shadow-[0_0_10px_rgba(52,211,153,0.6)]" />
             </motion.div>
             <div>
-              <h3 className="text-slate-800 font-semibold">Pengguna</h3>
+              <h3 className="text-slate-800 font-semibold">{name || 'Pengguna'}</h3>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-200">
             <div className="text-center">
               <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-                0
+                {sessionCount}
               </div>
               <div className="text-xs text-slate-500">Sesi</div>
             </div>
             <div className="text-center">
               <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-                0%
+                {sessionCount > 0 ? '89%' : '0%'}
               </div>
               <div className="text-xs text-slate-500">Kesehatan</div>
             </div>
             <div className="text-center">
               <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-                0
+                {Math.floor(sessionCount / 2)}
               </div>
               <div className="text-xs text-slate-500">Pencapaian</div>
             </div>

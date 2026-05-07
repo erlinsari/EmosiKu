@@ -17,6 +17,10 @@ interface ConsultationLog {
 
 export default function App() {
   const [consultationText, setConsultationText] = useState('');
+  const [userName, setUserName] = useState<string | null>(null);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [tempName, setTempName] = useState('');
+  
   const [isAnalyzed, setIsAnalyzed] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState({
@@ -29,7 +33,31 @@ export default function App() {
     energy: 0
   });
 
-  const [consultationLogs] = useState<ConsultationLog[]>([]);
+  const [consultationLogs, setConsultationLogs] = useState<ConsultationLog[]>([]);
+
+  // Load data dari LocalStorage saat pertama kali buka
+  useEffect(() => {
+    const savedName = localStorage.getItem('emosiku_user_name');
+    const savedLogs = localStorage.getItem('emosiku_logs');
+    
+    if (savedName) {
+      setUserName(savedName);
+    } else {
+      setShowWelcome(true);
+    }
+    
+    if (savedLogs) {
+      setConsultationLogs(JSON.parse(savedLogs));
+    }
+  }, []);
+
+  const handleSaveName = () => {
+    if (tempName.trim()) {
+      localStorage.setItem('emosiku_user_name', tempName);
+      setUserName(tempName);
+      setShowWelcome(false);
+    }
+  };
 
   const handleAnalyze = async () => {
     if (consultationText.trim()) {
@@ -46,8 +74,21 @@ export default function App() {
         {/* Hasil Analisis */}
         const isStable = data.prediction === 0;
         
+        const newLog: ConsultationLog = {
+          id: Date.now().toString(),
+          time: 'Baru saja',
+          input: consultationText,
+          status: isStable ? 'Kondisi Stabil' : 'Terindikasi Gangguan',
+          sentiment: isStable ? 'positive' : 'negative',
+          confidence: Math.round(data.confidence * 100)
+        };
+
+        const updatedLogs = [newLog, ...consultationLogs];
+        setConsultationLogs(updatedLogs);
+        localStorage.setItem('emosiku_logs', JSON.stringify(updatedLogs));
+
         setAnalysisResult({
-          status: isStable ? 'Kondisi Stabil' : 'Terindikasi Gangguan Psikologis',
+          status: isStable ? 'Kondisi Stabil' : 'Terindikasi Gangguan',
           sentiment: isStable ? 'positive' : 'negative',
           description: isStable 
             ? 'Pola emosi Anda memancarkan keseimbangan dan energi positif. Tidak terdeteksi indikasi gangguan mental yang signifikan. Pertahankan kesehatan mental Anda.'
@@ -70,6 +111,40 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative overflow-hidden">
+      {/* Welcome Modal */}
+      {showWelcome && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-3xl p-8 shadow-2xl max-w-md w-full border border-white/20"
+          >
+            <div className="w-16 h-16 bg-violet-100 rounded-2xl flex items-center justify-center mb-6">
+              <User className="w-8 h-8 text-violet-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-800 mb-2" style={{ fontFamily: 'Clash Display, sans-serif' }}>
+              Selamat Datang di EmosiKu
+            </h2>
+            <p className="text-slate-600 mb-6">
+              Boleh kami tahu siapa nama Anda agar pengalaman konsultasi terasa lebih personal?
+            </p>
+            <input 
+              type="text"
+              value={tempName}
+              onChange={(e) => setTempName(e.target.value)}
+              placeholder="Masukkan nama Anda..."
+              className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-violet-400 mb-6"
+            />
+            <button 
+              onClick={handleSaveName}
+              className="w-full py-4 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-violet-200 hover:shadow-violet-300 transition-all"
+            >
+              Mulai Konsultasi
+            </button>
+          </motion.div>
+        </div>
+      )}
+
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -91,7 +166,7 @@ export default function App() {
       </div>
 
       {/* Sidebar */}
-      <Sidebar />
+      <Sidebar name={userName} sessionCount={consultationLogs.length} />
 
       {/* Main Content */}
       <div className="ml-80 p-8 relative z-10">
