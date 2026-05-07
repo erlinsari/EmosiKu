@@ -2,38 +2,27 @@ import streamlit as st
 import streamlit.components.v1 as components
 import os
 import json
-import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
 import subprocess
 import time
 
 st.set_page_config(page_title="EmosiKu - AI Psychotherapy", layout="wide")
 
-# --- BAGIAN 1: LOGIKA AI ---
-@st.cache_resource
-def load_nlp_model():
-    model_name = "indobenchmark/indobert-base-p1"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
-    stopword_remover = StopWordRemoverFactory().create_stop_word_remover()
-    return tokenizer, model, stopword_remover
+# Tampilkan Style CSS Dasar Streamlit segera
+st.markdown("""
+    <style>
+        .stApp { background: #0f172a; margin: 0; padding: 0; }
+        iframe { border: none !important; width: 100%; min-height: 100vh; background: #ffffff; }
+        header, footer { display: none !important; }
+        .stMain { padding: 0 !important; }
+    </style>
+""", unsafe_allow_html=True)
 
-tokenizer, model, stopword_remover = load_nlp_model()
-
-# --- BAGIAN 2: JALANKAN API BACKEND ---
-if 'api_process' not in st.session_state:
-    st.session_state.api_process = subprocess.Popen(["python", "api.py"])
-    time.sleep(3)
-
-# --- BAGIAN 3: SERVE TAMPILAN PREMIUM ---
+# --- BAGIAN 1: SERVE TAMPILAN PREMIUM (Dijalankan Segera) ---
 def get_premium_ui():
     assets_path = "frontend/dist/assets"
-    
     if not os.path.exists(assets_path):
-        return "<h3 style='color:white;'>Error: Folder assets tidak ditemukan. Harap jalankan build.</h3>"
+        return "<h3>Error: Folder assets tidak ditemukan.</h3>"
     
-    # Cari file JS dan CSS terbaru
     js_file = next((f for f in os.listdir(assets_path) if f.startswith("index-") and f.endswith(".js")), None)
     css_file = next((f for f in os.listdir(assets_path) if f.startswith("index-") and f.endswith(".css")), None)
     
@@ -43,57 +32,54 @@ def get_premium_ui():
         with open(os.path.join(assets_path, css_file), "r", encoding="utf-8") as f:
             css_code = f.read()
             
-        # Gunakan json.dumps untuk keamanan karakter spesial
         js_json = json.dumps(js_code)
         css_json = json.dumps(css_code)
         
-        final_html = f"""
+        # Template HTML yang dioptimasi
+        return f"""
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="UTF-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <style>
-                html, body, #root {{ height: 100%; margin: 0; padding: 0; background: #ffffff; }}
-            </style>
+            <style>html,body,#root{{height:100%;margin:0;padding:0;}}</style>
             <script>
-                (function() {{
-                    const cssCode = {css_json};
-                    const cssBlob = new Blob([cssCode], {{ type: 'text/css' }});
-                    const cssUrl = URL.createObjectURL(cssBlob);
-                    const link = document.createElement('link');
-                    link.rel = 'stylesheet';
-                    link.href = cssUrl;
-                    document.head.appendChild(link);
+                const cssCode = {css_json};
+                const style = document.createElement('style');
+                style.textContent = cssCode;
+                document.head.appendChild(style);
 
+                window.onload = () => {{
                     const jsCode = {js_json};
-                    const jsBlob = new Blob([jsCode], {{ type: 'text/javascript' }});
-                    const jsUrl = URL.createObjectURL(jsBlob);
-                    
-                    const script = document.createElement('script');
-                    script.type = 'module';
-                    script.src = jsUrl;
-                    document.head.appendChild(script);
-                }})();
+                    const blob = new Blob([jsCode], {{type: 'text/javascript'}});
+                    const url = URL.createObjectURL(blob);
+                    import(url).catch(console.error);
+                }};
             </script>
         </head>
-        <body>
-            <div id="root"></div>
-        </body>
+        <body><div id="root"></div></body>
         </html>
         """
-        return final_html
+    return "<h3>Error: Aset tidak ditemukan.</h3>"
+
+# Munculkan UI Premium
+ui_html = get_premium_ui()
+components.html(ui_html, height=1200, scrolling=True)
+
+# --- BAGIAN 2: LOGIKA AI (Dimuat di Latar Belakang) ---
+# Kita gunakan placeholder agar user tahu proses AI sedang berjalan di belakang layar
+status_placeholder = st.empty()
+
+if 'api_process' not in st.session_state:
+    with status_placeholder:
+        st.info("🔄 Mengaktifkan Mesin AI EmosiKu... Mohon tunggu sebentar.")
     
-    return "<h3 style='color:white;'>Error: Gagal mendeteksi file index di folder assets.</h3>"
-
-# Tampilkan UI
-st.markdown("""
-    <style>
-        .stApp {{ background: #0f172a; margin: 0; padding: 0; }}
-        iframe {{ border: none !important; width: 100%; min-height: 100vh; }}
-        header {{ display: none !important; }}
-    </style>
-""", unsafe_allow_html=True)
-
-premium_html = get_premium_ui()
-components.html(premium_html, height=1500, scrolling=True)
+    # Jalankan API
+    try:
+        st.session_state.api_process = subprocess.Popen(["python", "api.py"])
+        time.sleep(5) # Beri waktu API untuk loading model
+        status_placeholder.empty()
+        st.success("✅ AI EmosiKu Siap!")
+        time.sleep(2)
+        st.rerun() # Refresh sekali agar sukses menghilang dan fokus ke UI
+    except Exception as e:
+        st.error(f"Gagal menjalankan AI: {e}")
