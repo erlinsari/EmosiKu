@@ -1,8 +1,1 @@
 streamlit
-transformers
-torch
-Sastrawi
-fastapi
-uvicorn
-pydantic
-pandas
