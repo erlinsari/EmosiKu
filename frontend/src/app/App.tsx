@@ -52,12 +52,14 @@ export default function App() {
 
   const handleAnalyze = () => {
     if (consultationText.trim()) {
-      // TEKNIK PINTU BELAKANG: Gunakan Link Rahasia untuk menembus blokade Cloud
       const encodedText = encodeURIComponent(consultationText);
-      const link = document.createElement('a');
-      link.href = `./?analyze=${encodedText}`;
-      link.target = '_parent'; // Ini kunci untuk menembus Iframe
-      link.click();
+      // PAKSA: Gunakan window.top untuk menembus semua level Iframe
+      try {
+        window.top.location.search = `?analyze=${encodedText}`;
+      } catch (e) {
+        // Fallback jika window.top diblokir total
+        window.parent.location.href = `./?analyze=${encodedText}`;
+      }
     }
   };
 

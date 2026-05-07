@@ -8,15 +8,16 @@ import glob
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
 
-# 1. Konfigurasi Halaman (Hapus Margin & Ruang Hitam)
+# 1. Konfigurasi Halaman (Berikan Ruang di Atas agar Tidak Terpotong)
 st.set_page_config(page_title="EmosiKu - AI Psychotherapy", layout="wide", initial_sidebar_state="collapsed")
 
-# Suntikan CSS ke Jendela Utama Streamlit
+# Suntikan CSS dengan Padding Atas yang Cukup
 st.markdown("""
 <style>
-    .block-container { padding: 0 !important; max-width: 100% !important; }
-    [data-testid="stAppViewContainer"] { background: white !important; }
-    iframe { border: none !important; width: 100% !important; }
+    /* Berikan jarak 4rem di atas agar tidak terpotong header */
+    .block-container { padding: 4rem 1rem 1rem 1rem !important; max-width: 100% !important; }
+    [data-testid="stAppViewContainer"] { background: #f8fafc !important; }
+    iframe { border: none !important; width: 100% !important; border-radius: 20px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -58,20 +59,14 @@ def get_premium_ui(result=None):
         index_path = os.path.join(DIST_DIR, "index.html")
         assets_dir = os.path.join(DIST_DIR, "assets")
         
-        if not os.path.exists(index_path):
-            return f"<h3>Error: index.html tidak ditemukan di {index_path}</h3>"
-            
         with open(index_path, "r", encoding="utf-8") as f:
             html_content = f.read()
         
-        # PENCARIAN CERDAS: Gunakan glob untuk mencari file js/css apa pun namanya
         js_files = glob.glob(os.path.join(assets_dir, "*.js"))
         css_files = glob.glob(os.path.join(assets_dir, "*.css"))
         
-        if not js_files or not css_files:
-            return f"<h3>Error: File JS/CSS tidak ditemukan di {assets_dir}</h3>"
-        
         result_json = json.dumps(result) if result else "null"
+        # Gunakan window.top untuk memastikan sinyal sampai ke jendela utama
         injection = f'<script>window.initialResult = {result_json};</script>'
         
         with open(js_files[0], "r", encoding="utf-8") as f:
@@ -84,14 +79,14 @@ def get_premium_ui(result=None):
         final_html = final_html.replace('</body>', f'<script type="module">{js_code.replace("</script>", "<\\/script>")}</script></body>')
         return final_html
     except Exception as e:
-        return f"<h3>Exception: {str(e)}</h3>"
+        return f"<h3>Error: {str(e)}</h3>"
 
 # --- PENERIMA ANALISIS ---
 query_params = st.query_params
 if "analyze" in query_params:
     text_to_analyze = query_params["analyze"]
     st.query_params.clear()
-    with st.spinner("Sedang menganalisis emosi Anda..."):
+    with st.spinner("AI sedang menganalisis perasaan Anda..."):
         st.session_state.current_result = analyze_emotion(text_to_analyze)
         st.rerun()
 
