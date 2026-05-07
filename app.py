@@ -7,17 +7,15 @@ import subprocess
 st.set_page_config(page_title="EmosiKu - AI Psychotherapy", layout="wide")
 
 def get_premium_ui():
-    # KITA GUNAKAN FILE YANG ADA DI ROOT (Jalur paling aman saat ini)
     index_path = "index.html"
     assets_path = "assets"
     
     if not os.path.exists(index_path):
-        return "<h3>Error: File index.html tidak ditemukan di root.</h3>"
+        return "<h3>Error: File index.html tidak ditemukan.</h3>"
     
     with open(index_path, "r", encoding="utf-8") as f:
         html_content = f.read()
     
-    # Deteksi aset di folder root/assets
     js_match = re.search(r'<script .*?src="\./assets/(index-.*?\.js)".*?></script>', html_content)
     css_match = re.search(r'<link .*?href="\./assets/(index-.*?\.css)".*?>', html_content)
     
@@ -30,22 +28,26 @@ def get_premium_ui():
         with open(os.path.join(assets_path, css_file), "r", encoding="utf-8") as f:
             css_code = f.read()
             
-        # Injeksi stabil
-        new_js = '<script type="module">' + js_code + '</script>'
-        new_css = '<style>' + css_code + '</style>'
+        # PENTING: Escape karakter yang bisa merusak tag HTML
+        # Kita gunakan metode pembersihan yang lebih aman
+        safe_js = js_code.replace('</script>', '<\\/script>')
         
+        new_js = f'<script type="module">{safe_js}</script>'
+        new_css = f'<style>{css_code}</style>'
+        
+        # Ganti tag asli dengan kode yang sudah dibersihkan
         html_content = html_content.replace(js_match.group(0), new_js)
         html_content = html_content.replace(css_match.group(0), new_css)
         
         return html_content
     
-    return f"<h3>Error: Gagal memetakan aset di {assets_path}.</h3>"
+    return "<h3>Error: Gagal memetakan aset desain.</h3>"
 
-# Render
+# Tampilkan UI
 premium_html = get_premium_ui()
 components.html(premium_html, height=1200, scrolling=True)
 
-# Jalankan API
+# Jalankan API di latar belakang
 if 'api_started' not in st.session_state:
     try:
         subprocess.Popen(["python", "api.py"])
