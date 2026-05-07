@@ -4,6 +4,7 @@ import os
 import re
 import torch
 import json
+import glob
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
 
@@ -53,27 +54,37 @@ def analyze_emotion(text):
     }
 
 def get_premium_ui(result=None):
-    index_path = os.path.join(DIST_DIR, "index.html")
-    assets_dir = os.path.join(DIST_DIR, "assets")
-    
-    with open(index_path, "r", encoding="utf-8") as f:
-        html_content = f.read()
-    
-    js_files = [f for f in os.listdir(assets_dir) if f.endswith(".js")]
-    css_files = [f for f in os.listdir(assets_dir) if f.endswith(".css")]
-    
-    result_json = json.dumps(result) if result else "null"
-    injection = f'<script>window.initialResult = {result_json};</script>'
-    
-    with open(os.path.join(assets_dir, js_files[0]), "r", encoding="utf-8") as f:
-        js_code = f.read()
-    with open(os.path.join(assets_dir, css_files[0]), "r", encoding="utf-8") as f:
-        css_code = f.read()
-    
-    final_html = html_content.replace('<head>', f'<head>{injection}')
-    final_html = final_html.replace('</head>', f'<style>{css_code}</style></head>')
-    final_html = final_html.replace('</body>', f'<script type="module">{js_code.replace("</script>", "<\\/script>")}</script></body>')
-    return final_html
+    try:
+        index_path = os.path.join(DIST_DIR, "index.html")
+        assets_dir = os.path.join(DIST_DIR, "assets")
+        
+        if not os.path.exists(index_path):
+            return f"<h3>Error: index.html tidak ditemukan di {index_path}</h3>"
+            
+        with open(index_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
+        
+        # PENCARIAN CERDAS: Gunakan glob untuk mencari file js/css apa pun namanya
+        js_files = glob.glob(os.path.join(assets_dir, "*.js"))
+        css_files = glob.glob(os.path.join(assets_dir, "*.css"))
+        
+        if not js_files or not css_files:
+            return f"<h3>Error: File JS/CSS tidak ditemukan di {assets_dir}</h3>"
+        
+        result_json = json.dumps(result) if result else "null"
+        injection = f'<script>window.initialResult = {result_json};</script>'
+        
+        with open(js_files[0], "r", encoding="utf-8") as f:
+            js_code = f.read()
+        with open(css_files[0], "r", encoding="utf-8") as f:
+            css_code = f.read()
+        
+        final_html = html_content.replace('<head>', f'<head>{injection}')
+        final_html = final_html.replace('</head>', f'<style>{css_code}</style></head>')
+        final_html = final_html.replace('</body>', f'<script type="module">{js_code.replace("</script>", "<\\/script>")}</script></body>')
+        return final_html
+    except Exception as e:
+        return f"<h3>Exception: {str(e)}</h3>"
 
 # --- PENERIMA ANALISIS ---
 query_params = st.query_params
@@ -91,5 +102,4 @@ if 'current_result' not in st.session_state:
 premium_html = get_premium_ui(st.session_state.current_result)
 st.session_state.current_result = None
 
-# Gunakan components.html (BUKAN declare_component) agar desain PASTI muncul
 components.html(premium_html, height=1200, scrolling=True)
