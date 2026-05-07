@@ -75,7 +75,6 @@ export default function App() {
           <h2 className="text-4xl font-bold text-slate-800 mb-2" style={{ fontFamily: 'Clash Display, sans-serif' }}>
             Analisis Kesehatan Mental AI
           </h2>
-          <p className="text-slate-600">Bagikan pikiran Anda dan biarkan AI kami memberikan wawasan</p>
         </motion.div>
 
         <GlassPanel glow className="mb-8">

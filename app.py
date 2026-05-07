@@ -14,7 +14,8 @@ DIST_DIR = os.path.join(BASE_DIR, "frontend", "dist")
 
 @st.cache_resource
 def load_ai_engine():
-    MODEL_NAME = "indobenchmark/indobert-base-p1"
+    # Menggunakan model LITE (Jauh lebih cepat dan ringan untuk Cloud)
+    MODEL_NAME = "indobenchmark/indobert-lite-base-p1"
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=2)
     stopword_remover = StopWordRemoverFactory().create_stop_word_remover()
@@ -24,12 +25,17 @@ def analyze_emotion(text):
     tokenizer, model, stopword_remover = load_ai_engine()
     text = re.sub(r'http\S+|[^a-zA-Z\s]', '', str(text)).lower()
     cleaned = stopword_remover.remove(text).strip()
-    inputs = tokenizer(cleaned, return_tensors="pt", truncation=True, padding=True, max_length=128)
+    
+    # Tambahkan padding dan truncation yang lebih ketat untuk kecepatan
+    inputs = tokenizer(cleaned, return_tensors="pt", truncation=True, padding=True, max_length=64)
+    
     with torch.no_grad():
         out = model(**inputs)
+    
     probs = torch.softmax(out.logits, dim=-1)[0]
     pred = torch.argmax(out.logits, dim=-1).item()
     is_stable = pred == 0
+    
     return {
         "status": 'Kondisi Stabil' if is_stable else 'Terindikasi Gangguan Psikologis',
         "sentiment": 'positive' if is_stable else 'negative',
@@ -56,9 +62,6 @@ def get_premium_ui(result=None):
         js_files = [f for f in os.listdir(assets_dir) if f.endswith(".js")]
         css_files = [f for f in os.listdir(assets_dir) if f.endswith(".css")]
         
-        if not js_files:
-            return "SYSTEM_ERROR: JS tidak ditemukan."
-            
         result_json = json.dumps(result) if result else "null"
         injection = f'<script>window.initialResult = {result_json};</script>'
         
@@ -70,7 +73,6 @@ def get_premium_ui(result=None):
         final_html = html_content.replace('<head>', f'<head>{injection}')
         final_html = final_html.replace('</head>', f'<style>{css_code}</style></head>')
         final_html = final_html.replace('</body>', f'<script type="module">{js_code.replace("</script>", "<\\/script>")}</script></body>')
-        
         return final_html
     except Exception as e:
         return f"SYSTEM_ERROR: {str(e)}"
@@ -79,7 +81,7 @@ def get_premium_ui(result=None):
 if "analyze" in st.query_params:
     text = st.query_params["analyze"]
     st.query_params.clear()
-    with st.spinner("Menganalisis..."):
+    with st.spinner("Sedang menganalisis emosi Anda..."):
         st.session_state.current_result = analyze_emotion(text)
         st.rerun()
 
