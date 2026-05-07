@@ -27,7 +27,7 @@ if 'api_process' not in st.session_state:
     st.session_state.api_process = subprocess.Popen(["python", "api.py"])
     time.sleep(3)
 
-# --- BAGIAN 3: SERVE TAMPILAN PREMIUM ---
+# --- BAGIAN 3: SERVE TAMPILAN PREMIUM (Metode Blob URL) ---
 def get_premium_ui():
     dist_path = "frontend/dist"
     index_path = os.path.join(dist_path, "index.html")
@@ -38,7 +38,6 @@ def get_premium_ui():
     with open(index_path, "r", encoding="utf-8") as f:
         html_content = f.read()
     
-    # Deteksi file JS dan CSS
     js_match = re.search(r'src="\./assets/(index-.*?\.js)"', html_content)
     css_match = re.search(r'href="\./assets/(index-.*?\.css)"', html_content)
     
@@ -46,14 +45,11 @@ def get_premium_ui():
         js_file = js_match.group(1)
         css_file = css_match.group(1)
         
-        # Baca file asli
         with open(os.path.join(dist_path, "assets", js_file), "rb") as f:
             js_base64 = base64.b64encode(f.read()).decode()
         with open(os.path.join(dist_path, "assets", css_file), "rb") as f:
             css_base64 = base64.b64encode(f.read()).decode()
             
-        # Konstruksi HTML baru yang bersih
-        # Kita hapus tag asli dan buat tag baru di bagian head
         final_html = f"""
         <!DOCTYPE html>
         <html>
@@ -62,19 +58,30 @@ def get_premium_ui():
             <meta name="viewport" content="width=device-width, initial-scale=1.0" />
             <title>EmosiKu</title>
             <style>
-                html, body, #root {{ height: 100%; margin: 0; padding: 0; background: #f8fafc; }}
+                html, body, #root {{ height: 100%; margin: 0; padding: 0; background: #ffffff; }}
             </style>
-            <style type="text/css">
-                /* CSS Terinjeksi */
-                {base64.b64decode(css_base64).decode('utf-8', errors='ignore')}
-            </style>
+            <script>
+                // Load CSS via Blob
+                const cssData = atob("{css_base64}");
+                const cssBlob = new Blob([cssData], {{ type: 'text/css' }});
+                const cssUrl = URL.createObjectURL(cssBlob);
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = cssUrl;
+                document.head.appendChild(link);
+
+                // Load JS via Blob Module
+                async function loadApp() {{
+                    const jsData = atob("{js_base64}");
+                    const jsBlob = new Blob([jsData], {{ type: 'text/javascript' }});
+                    const jsUrl = URL.createObjectURL(jsBlob);
+                    await import(jsUrl);
+                }}
+                window.onload = loadApp;
+            </script>
         </head>
         <body>
             <div id="root"></div>
-            <script type="module">
-                /* JS Terinjeksi */
-                {base64.b64decode(js_base64).decode('utf-8', errors='ignore')}
-            </script>
         </body>
         </html>
         """
@@ -85,10 +92,9 @@ def get_premium_ui():
 # Tampilkan UI
 st.markdown("""
     <style>
-        .stApp { background: #0f172a; margin: 0; padding: 0; }
-        iframe { border: none !important; width: 100%; min-height: 100vh; }
-        header { display: none !important; }
-        footer { display: none !important; }
+        .stApp {{ background: #0f172a; margin: 0; padding: 0; }}
+        iframe {{ border: none !important; width: 100%; min-height: 100vh; }}
+        header {{ display: none !important; }}
     </style>
 """, unsafe_allow_html=True)
 
