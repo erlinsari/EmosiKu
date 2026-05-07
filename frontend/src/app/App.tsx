@@ -33,30 +33,44 @@ export default function App() {
 
   // Sistem Penerima Data dari Streamlit
   useEffect(() => {
-    // Cek apakah ada hasil yang disuntikkan langsung oleh Streamlit
-    const initialResult = (window as any).initialResult;
-    if (initialResult) {
-      setAnalysisResult(initialResult);
-      setIsAnalyzed(true);
-      setIsAnalyzing(false);
-      
-      const newLog: ConsultationLog = {
-        id: Date.now().toString(),
-        time: new Date().toLocaleTimeString('id-ID'),
-        input: initialResult.originalText || '',
-        status: initialResult.status,
-        sentiment: initialResult.sentiment,
-        confidence: initialResult.clarity
-      };
-      setConsultationLogs(prev => [newLog, ...prev]);
-      // Bersihkan agar tidak muncul terus saat refresh
-      delete (window as any).initialResult;
-    }
+    const Streamlit = (window as any).Streamlit;
 
     const onRender = (event: any) => {
-      // ... existing listener code if needed ...
+      // Data dari Python (st.session_state.last_result) masuk ke sini
+      const data = event.detail.args.result;
+      if (data && data.status) {
+        setAnalysisResult(data);
+        setIsAnalyzed(true);
+        setIsAnalyzing(false);
+        
+        const newLog: ConsultationLog = {
+          id: Date.now().toString(),
+          time: new Date().toLocaleTimeString('id-ID'),
+          input: data.originalText || '',
+          status: data.status,
+          sentiment: data.sentiment,
+          confidence: data.clarity
+        };
+        setConsultationLogs(prev => [newLog, ...prev]);
+      }
+      
+      // Beritahu Streamlit tinggi komponen kita
+      if (Streamlit) {
+        Streamlit.setFrameHeight();
+      }
     };
-    // ...
+
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'streamlit:render') {
+        onRender({ detail: { args: event.data.args } });
+      }
+    });
+
+    // Inisialisasi awal
+    if (Streamlit) {
+      Streamlit.setComponentReady();
+      Streamlit.setFrameHeight();
+    }
   }, []);
 
   const handleAnalyze = async () => {
