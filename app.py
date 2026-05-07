@@ -48,37 +48,17 @@ def predict_emotion(text):
         "lastInput": text
     }
 
-# --- BAGIAN 2: SERVE TAMPILAN PREMIUM ---
-def get_premium_ui_html():
-    dist_path = "frontend/dist"
-    index_path = os.path.join(dist_path, "index.html")
-    
-    with open(index_path, "r", encoding="utf-8") as f:
-        html_content = f.read()
-    
-    js_match = re.search(r'src="\./assets/(index-.*?\.js)"', html_content)
-    css_match = re.search(r'href="\./assets/(index-.*?\.css)"', html_content)
-    
-    if js_match and css_match:
-        with open(os.path.join(dist_path, "assets", js_match.group(1)), "rb") as f:
-            js_base64 = base64.b64encode(f.read()).decode()
-        with open(os.path.join(dist_path, "assets", css_match.group(1)), "rb") as f:
-            css_base64 = base64.b64encode(f.read()).decode()
-            
-        html_content = html_content.replace(js_match.group(0), f'src="data:text/javascript;base64,{js_base64}"')
-        html_content = html_content.replace(css_match.group(0), f'href="data:text/css;base64,{css_base64}"')
-    
-    return html_content
+# Deklarasi Komponen (Menunjuk ke folder hasil build)
+component_path = os.path.join("frontend", "dist")
+component_func = components.declare_component("emosiku_ui", path=component_path)
 
-# Deklarasi Komponen
 if "result" not in st.session_state:
     st.session_state.result = {"status": "Menunggu Analisis"}
 
 # Tampilkan UI
 st.markdown("""<style>.stApp { margin: 0; padding: 0; } iframe { border: none !important; width: 100%; }</style>""", unsafe_allow_html=True)
 
-# Gunakan declare_component untuk komunikasi 2 arah
-component_func = components.declare_component("emosiku_ui", html=get_premium_ui_html())
+# Panggil komponen
 event_data = component_func(result=st.session_state.result)
 
 # Proses jika ada data dari React
