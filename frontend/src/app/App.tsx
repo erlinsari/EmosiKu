@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Sparkles, Clock, Zap, Brain } from 'lucide-react';
+import { Sparkles, Clock, Zap, Brain, User } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { GlassPanel } from './components/GlassPanel';
 import { MoodAvatar } from './components/MoodAvatar';
