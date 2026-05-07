@@ -1,10 +1,4 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { Sparkles, Clock, Zap, Brain } from 'lucide-react';
-import { Sidebar } from './components/Sidebar';
-import { GlassPanel } from './components/GlassPanel';
-import { MoodAvatar } from './components/MoodAvatar';
-import { CircularProgress } from './components/CircularProgress';
 
 interface ConsultationLog {
   id: string;
@@ -21,7 +15,7 @@ export default function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState({
     status: 'Menunggu Analisis',
-    sentiment: 'neutral' as 'positive' | 'neutral' | 'negative',
+    sentiment: 'neutral',
     description: 'Silakan masukkan teks konsultasi Anda di atas untuk memulai analisis kesehatan emosional Anda.',
     wellness: 0,
     stress: 0,
@@ -31,23 +25,8 @@ export default function App() {
 
   const [consultationLogs, setConsultationLogs] = useState<ConsultationLog[]>([]);
 
-  // Fungsi kirim data ke Streamlit
-  const sendToStreamlit = (data: any) => {
-    window.parent.postMessage({
-      isStreamlitMessage: true,
-      type: "streamlit:setComponentValue",
-      value: data
-    }, "*");
-  };
-
+  // Komunikasi Ringan ke Streamlit
   useEffect(() => {
-    // Beritahu Streamlit tinggi frame
-    window.parent.postMessage({
-      isStreamlitMessage: true,
-      type: "streamlit:setFrameHeight",
-      height: document.body.scrollHeight
-    }, "*");
-
     const onMessage = (event: any) => {
       const data = event.data;
       if (data.type === "streamlit:render") {
@@ -56,123 +35,132 @@ export default function App() {
           setAnalysisResult(result);
           setIsAnalyzed(true);
           setIsAnalyzing(false);
-          
           setConsultationLogs(prev => {
             const isNew = !prev.some(log => log.id === result.id);
-            if (isNew && result.id) {
-              return [{
-                id: result.id,
-                time: 'Baru saja',
-                input: result.lastInput,
-                status: result.status,
-                sentiment: result.sentiment,
-                confidence: result.clarity
-              }, ...prev];
-            }
+            if (isNew) return [{
+              id: result.id,
+              time: 'Baru saja',
+              input: result.lastInput,
+              status: result.status,
+              sentiment: result.sentiment,
+              confidence: result.clarity
+            }, ...prev];
             return prev;
           });
         }
       }
     };
     window.addEventListener("message", onMessage);
+    window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: document.body.scrollHeight }, "*");
     return () => window.removeEventListener("message", onMessage);
-  }, []);
+  }, [consultationLogs]);
 
   const handleAnalyze = () => {
     if (consultationText.trim()) {
       setIsAnalyzing(true);
-      sendToStreamlit({
-        action: 'analyze',
-        text: consultationText
-      });
+      window.parent.postMessage({
+        isStreamlitMessage: true,
+        type: "streamlit:setComponentValue",
+        value: { action: 'analyze', text: consultationText }
+      }, "*");
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar name="Pengguna" sessionCount={consultationLogs.length} />
+    <div className="app-container">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap');
+        :root { --glass: rgba(255, 255, 255, 0.7); }
+        body { margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; background: #f0f4ff; color: #1e293b; }
+        .app-container { display: flex; min-height: 100vh; }
+        
+        /* Sidebar */
+        .sidebar { width: 300px; background: white; border-right: 1px solid #e2e8f0; padding: 32px; position: fixed; height: 100vh; }
+        .logo { font-size: 24px; font-weight: 800; color: #6366f1; margin-bottom: 40px; display: flex; align-items: center; gap: 10px; }
+        .profile-card { background: linear-gradient(135deg, #6366f1, #a855f7); color: white; padding: 20px; rounded-2xl; border-radius: 20px; margin-bottom: 24px; }
+        .stats { display: grid; grid-template-cols: 1fr 1fr 1fr; gap: 10px; text-align: center; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.2); pt: 10px; }
+        
+        /* Main */
+        .main { margin-left: 300px; flex: 1; padding: 40px; }
+        .glass-panel { background: var(--glass); backdrop-filter: blur(12px); border: 1px solid white; border-radius: 24px; padding: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        textarea { width: 100%; height: 120px; border-radius: 16px; border: 1px solid #e2e8f0; padding: 15px; font-size: 16px; resize: none; outline: none; transition: 0.3s; }
+        textarea:focus { border-color: #6366f1; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1); }
+        .btn { background: linear-gradient(90deg, #6366f1, #a855f7); color: white; border: none; padding: 15px 30px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.3s; margin-top: 20px; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3); }
+        
+        /* Results */
+        .results-grid { display: grid; grid-template-cols: repeat(4, 1fr); gap: 20px; margin-top: 30px; }
+        .stat-box { background: white; padding: 20px; border-radius: 20px; text-align: center; border: 1px solid #e2e8f0; }
+        .history-card { background: white; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+      `}</style>
 
-      {/* Main Content */}
-      <div className="ml-80 p-8 relative z-10">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h2 className="text-4xl font-bold text-slate-800 mb-2" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-            Analisis Kesehatan Mental AI
-          </h2>
-          <p className="text-slate-600">Bagikan pikiran Anda dan biarkan AI kami memberikan wawasan</p>
-        </motion.div>
-
-        <GlassPanel glow className="mb-8">
-          <div className="p-8">
-            <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="w-5 h-5 text-violet-600" />
-              <label className="text-slate-800 font-semibold">Konsultasi</label>
-            </div>
-            <textarea
-              value={consultationText}
-              onChange={(e) => setConsultationText(e.target.value)}
-              placeholder="Ekspresikan diri Anda secara bebas..."
-              className="w-full h-40 bg-white/60 border border-violet-200 rounded-2xl px-6 py-4 text-slate-800 focus:outline-none focus:border-violet-400 resize-none transition-all"
-            />
-            <motion.button onClick={handleAnalyze} disabled={isAnalyzing} whileHover={{ scale: 1.02 }} className="mt-6 relative group">
-              <div className="px-10 py-4 bg-gradient-to-r from-violet-600 via-purple-600 to-cyan-600 rounded-2xl shadow-lg">
-                <span className="text-white font-bold flex items-center gap-2">
-                  {isAnalyzing ? "Menganalisis..." : "Analisis Kondisi Emosi"}
-                </span>
-              </div>
-            </motion.button>
+      <div className="sidebar">
+        <div className="logo">🧠 EmosiKu</div>
+        <div className="profile-card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ fontSize: '32px' }}>👤</div>
+            <div style={{ fontWeight: 700 }}>Pengguna</div>
           </div>
-        </GlassPanel>
+          <div className="stats" style={{ paddingTop: '10px' }}>
+            <div><div>{consultationLogs.length}</div><div style={{fontSize: '10px', opacity: 0.8}}>Sesi</div></div>
+            <div><div>85%</div><div style={{fontSize: '10px', opacity: 0.8}}>Mental</div></div>
+            <div><div>{Math.floor(consultationLogs.length/2)}</div><div style={{fontSize: '10px', opacity: 0.8}}>Medali</div></div>
+          </div>
+        </div>
+        <h4 style={{ color: '#64748b' }}>Menu</h4>
+        <div style={{ color: '#1e293b', fontWeight: 600 }}>🏠 Dashboard</div>
+      </div>
+
+      <div className="main">
+        <h1 style={{ fontSize: '36px', marginBottom: '8px' }}>Analisis Kesehatan Mental AI</h1>
+        <p style={{ color: '#64748b', marginBottom: '32px' }}>Bagikan apa yang Anda rasakan, biarkan AI kami memberikan wawasan.</p>
+
+        <div className="glass-panel">
+          <h3 style={{ marginBottom: '16px' }}>✨ Sesi Konsultasi</h3>
+          <textarea 
+            value={consultationText}
+            onChange={(e) => setConsultationText(e.target.value)}
+            placeholder="Bagaimana perasaan Anda hari ini? Ceritakan saja semuanya di sini..."
+          />
+          <button className="btn" onClick={handleAnalyze} disabled={isAnalyzing}>
+            {isAnalyzing ? "⌛ Sedang Menganalisis..." : "🚀 Analisis Kondisi Emosi"}
+          </button>
+        </div>
 
         {isAnalyzed && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
-            <GlassPanel className="p-8">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
-                <div className="lg:col-span-2 space-y-4">
-                  <h3 className="text-3xl font-bold text-slate-800">{analysisResult.status}</h3>
-                  <p className="text-slate-600 leading-relaxed">{analysisResult.description}</p>
-                </div>
-                <div className="flex justify-center">
-                  <MoodAvatar sentiment={analysisResult.sentiment} />
-                </div>
+          <div style={{ marginTop: '40px' }}>
+            <div className="glass-panel" style={{ display: 'flex', gap: '30px', alignItems: 'center' }}>
+              <div style={{ fontSize: '80px' }}>{analysisResult.sentiment === 'positive' ? '😊' : '😔'}</div>
+              <div>
+                <h2 style={{ margin: 0, color: '#1e293b' }}>{analysisResult.status}</h2>
+                <p style={{ color: '#64748b', fontSize: '18px' }}>{analysisResult.description}</p>
               </div>
-            </GlassPanel>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-              <GlassPanel className="p-6 text-center">
-                <CircularProgress value={analysisResult.wellness} label="Wellness" />
-              </GlassPanel>
-              <GlassPanel className="p-6 text-center">
-                <CircularProgress value={100 - analysisResult.stress} label="Ketenangan" />
-              </GlassPanel>
-              <GlassPanel className="p-6 text-center">
-                <CircularProgress value={analysisResult.clarity} label="Kejelasan" />
-              </GlassPanel>
-              <GlassPanel className="p-6 text-center">
-                <CircularProgress value={analysisResult.energy} label="Energi" />
-              </GlassPanel>
             </div>
-          </motion.div>
+            
+            <div className="results-grid">
+              <div className="stat-box"><div style={{fontSize: '24px', fontWeight: 700}}>{analysisResult.wellness}%</div><div>Wellness</div></div>
+              <div className="stat-box"><div style={{fontSize: '24px', fontWeight: 700}}>{100-analysisResult.stress}%</div><div>Calmness</div></div>
+              <div className="stat-box"><div style={{fontSize: '24px', fontWeight: 700}}>{analysisResult.clarity}%</div><div>Clarity</div></div>
+              <div className="stat-box"><div style={{fontSize: '24px', fontWeight: 700}}>{analysisResult.energy}%</div><div>Energy</div></div>
+            </div>
+          </div>
         )}
 
-        <div className="mt-8">
-          <h3 className="text-2xl font-bold text-slate-800 mb-6">Sesi Terakhir</h3>
-          <div className="space-y-4">
-            {consultationLogs.length === 0 ? (
-              <div className="text-center py-10 text-slate-400">Belum ada riwayat sesi.</div>
-            ) : (
-              consultationLogs.map((log) => (
-                <GlassPanel key={log.id} className="p-6">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h4 className="font-bold text-slate-800">{log.status}</h4>
-                      <p className="text-sm text-slate-500 italic">"{log.input}"</p>
-                    </div>
-                    <div className="text-xl font-bold text-slate-800">{log.confidence}%</div>
-                  </div>
-                </GlassPanel>
-              ))
-            )}
-          </div>
+        <div style={{ marginTop: '50px' }}>
+          <h3 style={{ marginBottom: '20px' }}>Sesi Terakhir</h3>
+          {consultationLogs.length === 0 ? (
+            <p style={{ color: '#94a3b8' }}>Belum ada riwayat sesi.</p>
+          ) : (
+            consultationLogs.map(log => (
+              <div key={log.id} className="history-card">
+                <div>
+                  <div style={{fontWeight: 700}}>{log.status}</div>
+                  <div style={{fontSize: '14px', color: '#64748b'}}>"{log.input.substring(0, 50)}..."</div>
+                </div>
+                <div style={{fontWeight: 700, color: '#6366f1'}}>{log.confidence}%</div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
