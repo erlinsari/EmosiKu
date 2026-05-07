@@ -3,37 +3,43 @@ import streamlit.components.v1 as components
 import os
 import subprocess
 
-st.set_page_config(page_title="EmosiKu", layout="wide")
-st.markdown("<style>.stApp {background-color: #0f172a;}</style>", unsafe_allow_html=True)
+st.set_page_config(page_title="EmosiKu - AI Psychotherapy", layout="wide")
+
+# Gunakan background gelap agar transisi mulus
+st.markdown("""
+    <style>
+        .stApp { background: #0f172a; margin: 0; padding: 0; }
+        iframe { border: none !important; width: 100%; min-height: 100vh; background: #ffffff; }
+        header, footer { display: none !important; }
+    </style>
+""", unsafe_allow_html=True)
 
 def render_premium_ui():
-    assets_path = "frontend/dist/assets"
-    if not os.path.exists(assets_path):
-        st.error(f"Folder assets tidak ditemukan. Path: {os.path.abspath(assets_path)}")
-        return
+    # URL Mentah dari GitHub (Bertindak sebagai CDN)
+    # Ini memastikan file dimuat secara utuh tanpa melewati batasan memori Streamlit
+    js_url = "https://raw.githubusercontent.com/erlinsari/EmosiKu/main/frontend/dist/assets/index-BBJjsgNE.js"
+    css_url = "https://raw.githubusercontent.com/erlinsari/EmosiKu/main/frontend/dist/assets/index-eQS-I5Sh.css"
     
-    files = os.listdir(assets_path)
-    js_file = next((f for f in files if f.startswith("index-") and f.endswith(".js")), None)
-    css_file = next((f for f in files if f.startswith("index-") and f.endswith(".css")), None)
-    
-    if js_file and css_file:
-        with open(os.path.join(assets_path, js_file), "r", encoding="utf-8") as f:
-            js_code = f.read()
-        with open(os.path.join(assets_path, css_file), "r", encoding="utf-8") as f:
-            css_code = f.read()
-            
-        # GABUNGKAN SECARA MANUAL (Sangat Aman)
-        html_start = """<!DOCTYPE html><html><head><meta charset="UTF-8" /><style>"""
-        html_middle = """</style></head><body><div id="root"></div><script type="module">"""
-        html_end = """</script></body></html>"""
-        
-        full_html = html_start + css_code + html_middle + js_code + html_end
-        components.html(full_html, height=1200, scrolling=True)
-    else:
-        st.error(f"Gagal menemukan aset. File tersedia: {files}")
+    html_code = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" crossorigin href="{css_url}">
+    </head>
+    <body>
+        <div id="root"></div>
+        <script type="module" crossorigin src="{js_url}"></script>
+    </body>
+    </html>
+    """
+    components.html(html_code, height=1200, scrolling=True)
 
+# Tampilkan UI segera
 render_premium_ui()
 
+# Jalankan AI di latar belakang
 if 'api_started' not in st.session_state:
     try:
         subprocess.Popen(["python", "api.py"])
