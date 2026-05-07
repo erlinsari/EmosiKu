@@ -12,12 +12,12 @@ def get_premium_ui():
     assets_path = "assets"
     
     if not os.path.exists(index_path):
-        return "<h3>Error: File index.html tidak ditemukan di root.</h3>"
+        return "<h3>Error: File index.html tidak ditemukan.</h3>"
     
     with open(index_path, "r", encoding="utf-8") as f:
         html_content = f.read()
     
-    # Deteksi aset menggunakan regex yang lebih fleksibel
+    # Cari nama file JS dan CSS yang aktif
     js_match = re.search(r'src="\./assets/(index-.*?\.js)"', html_content)
     css_match = re.search(r'href="\./assets/(index-.*?\.css)"', html_content)
     
@@ -30,30 +30,33 @@ def get_premium_ui():
         with open(os.path.join(assets_path, css_file), "r", encoding="utf-8") as f:
             css_code = f.read()
             
-        # Pembersihan karakter rawan
-        safe_js = js_code.replace('</script>', '<\\/script>')
+        # PENTING: Gunakan .replace() biasa, JANGAN gunakan re.sub() untuk konten JS
+        # Karena JS mengandung banyak simbol \ yang bisa bikin error re.sub
         
-        # Injeksi Desain Premium
-        new_js = f'<script type="module">{safe_js}</script>'
-        new_css = f'<style>{css_code}</style>'
+        tag_js_lama = js_match.group(0) # Ini adalah: src="./assets/index-xxx.js"
+        tag_css_lama = css_match.group(0) # Ini adalah: href="./assets/index-xxx.css"
         
-        # Ganti tag lama dengan kode asli (Inline)
-        html_content = re.sub(r'<script type="module" crossorigin src="\./assets/index-.*?\.js"></script>', new_js, html_content)
-        html_content = re.sub(r'<link rel="stylesheet" crossorigin href="\./assets/index-.*?\.css">', new_css, html_content)
+        # Kita buat tag baru yang berisi kode aslinya
+        # Kita pakai trick: ganti src dengan isi kodenya langsung
+        html_content = html_content.replace(f'type="module" crossorigin {tag_js_lama}', '')
+        html_content = html_content.replace(f'rel="stylesheet" crossorigin {tag_css_lama}', '')
+        
+        # Suntikkan kode asli di bagian akhir head dan body
+        html_content = html_content.replace('</head>', f'<style>{css_code}</style></head>')
+        html_content = html_content.replace('</body>', f'<script type="module">{js_code}</script></body>')
         
         return html_content
     
-    return f"<h3>Error: Aset gagal dimuat. Pastikan folder '{assets_path}' lengkap.</h3>"
+    return "<h3>Error: Aset gagal dipetakan.</h3>"
 
-# Render UI Premium
+# Tampilkan UI
 premium_html = get_premium_ui()
 components.html(premium_html, height=1200, scrolling=True)
 
-# Jalankan Mesin AI (api.py)
+# Jalankan Mesin AI
 if 'api_started' not in st.session_state:
     try:
-        # Gunakan sys.executable agar kompatibel dengan Linux/Windows di cloud
         subprocess.Popen([sys.executable, "api.py"])
         st.session_state.api_started = True
-    except Exception as e:
-        st.write(f"⚠️ Status AI: Sedang inisialisasi... ({e})")
+    except:
+        pass
