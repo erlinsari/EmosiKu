@@ -7,64 +7,67 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
 import time
 
-st.set_page_config(page_title="EmosiKu - AI Psychotherapy", layout="wide")
+# Page config
+st.set_page_config(page_title="EmosiKu", layout="wide", initial_sidebar_state="collapsed")
 
-# --- BAGIAN 1: LOGIKA AI ---
+# --- AI LOGIC ---
 @st.cache_resource
-def load_nlp_model():
-    model_name = "indobenchmark/indobert-base-p1"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
-    stopword_remover = StopWordRemoverFactory().create_stop_word_remover()
-    return tokenizer, model, stopword_remover
+def load_nlp():
+    m = "indobenchmark/indobert-base-p1"
+    tok = AutoTokenizer.from_pretrained(m)
+    mod = AutoModelForSequenceClassification.from_pretrained(m, num_labels=2)
+    sw = StopWordRemoverFactory().create_stop_word_remover()
+    return tok, mod, sw
 
-tokenizer, model, stopword_remover = load_nlp_model()
+tokenizer, model, stopword_remover = load_nlp()
 
-def predict_emotion(text):
-    text_clean = re.sub(r'http\S+|www\S+|https\S+|@\w+|#\w+|[^a-zA-Z\s]', '', text).lower()
-    text_clean = stopword_remover.remove(text_clean)
-    inputs = tokenizer(text_clean, return_tensors="pt", truncation=True, max_length=128)
+def get_prediction(text):
+    clean = re.sub(r'[^a-zA-Z\s]', '', text).lower()
+    clean = stopword_remover.remove(clean)
+    inputs = tokenizer(clean, return_tensors="pt", truncation=True, max_length=128)
     with torch.no_grad():
-        outputs = model(**inputs)
-        probs = torch.nn.functional.softmax(outputs.logits, dim=-1)
-        prediction = torch.argmax(probs, dim=-1).item()
+        out = model(**inputs)
+        probs = torch.nn.functional.softmax(out.logits, dim=-1)
+        pred = torch.argmax(probs, dim=-1).item()
         conf = torch.max(probs).item()
-    is_stable = prediction == 0
+    is_s = pred == 0
     return {
         "id": str(int(time.time())),
-        "status": "Kondisi Stabil" if is_stable else "Terindikasi Gangguan",
-        "sentiment": "positive" if is_stable else "negative",
-        "description": "Pola emosi Anda memancarkan keseimbangan dan energi positif. Tidak terdeteksi indikasi gangguan mental yang signifikan." if is_stable else "AI kami mendeteksi pola dalam bahasa Anda yang mungkin mengindikasikan kecemasan atau beban emosional yang berat.",
+        "status": "Kondisi Stabil" if is_s else "Terindikasi Gangguan",
+        "sentiment": "positive" if is_s else "negative",
+        "description": "Pola emosi Anda memancarkan energi positif." if is_s else "Terdeteksi beban emosional yang memerlukan perhatian.",
         "wellness": int(probs[0][0].item() * 100),
         "stress": int(probs[0][1].item() * 100),
         "clarity": int(conf * 100),
-        "energy": 85 if is_stable else 45,
+        "energy": 85 if is_s else 45,
         "lastInput": text
     }
 
-# --- BAGIAN 2: DEKLARASI KOMPONEN ---
-# Menggunakan path absolut agar server Cloud tidak bingung
-parent_dir = os.path.dirname(os.path.abspath(__file__))
-build_dir = os.path.join(parent_dir, "frontend", "dist")
-
-if not os.path.exists(build_dir):
-    st.error(f"Folder build tidak ditemukan di: {build_dir}")
+# --- UI COMPONENT ---
+# Gunakan folder 'web' yang sudah kita siapkan di root
+if not os.path.exists("web"):
+    st.error("Folder 'web' tidak ditemukan!")
 else:
-    # Nama komponen baru untuk memaksa refresh cache
-    emosiku_ui = components.declare_component("emosiku_premium_v1", path=build_dir)
+    # Nama komponen unik untuk memaksa reload
+    ui_component = components.declare_component("emosiku_final_v1", path="web")
 
     if "result" not in st.session_state:
         st.session_state.result = {"status": "Menunggu Analisis"}
 
-    st.markdown("""<style>.stApp { margin: 0; padding: 0; } iframe { border: none !important; width: 100%; height: 100vh; }</style>""", unsafe_allow_html=True)
+    # Full screen style
+    st.markdown("""<style>
+        .stApp { margin: 0; padding: 0; background: #f8fafc; }
+        iframe { border: none !important; width: 100%; height: 100vh; }
+        header { visibility: hidden; }
+        footer { visibility: hidden; }
+    </style>""", unsafe_allow_html=True)
 
-    # Jalankan komponen
-    event_data = emosiku_ui(result=st.session_state.result)
+    # Render Component
+    response = ui_component(result=st.session_state.result)
 
-    # Logika Analisis
-    if event_data and event_data.get("action") == "analyze":
-        text = event_data.get("text")
+    # Handle Analysis Request
+    if response and response.get("action") == "analyze":
+        text = response.get("text")
         if text:
-            with st.spinner("AI sedang menganalisis..."):
-                st.session_state.result = predict_emotion(text)
-                st.rerun()
+            st.session_state.result = get_prediction(text)
+            st.rerun()
