@@ -3,8 +3,6 @@ import streamlit.components.v1 as components
 import os
 import re
 import torch
-import base64
-import json
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
 import time
@@ -23,18 +21,14 @@ def load_nlp_model():
 tokenizer, model, stopword_remover = load_nlp_model()
 
 def predict_emotion(text):
-    # Cleaning
     text_clean = re.sub(r'http\S+|www\S+|https\S+|@\w+|#\w+|[^a-zA-Z\s]', '', text).lower()
     text_clean = stopword_remover.remove(text_clean)
-    
-    # Prediction
     inputs = tokenizer(text_clean, return_tensors="pt", truncation=True, max_length=128)
     with torch.no_grad():
         outputs = model(**inputs)
         probs = torch.nn.functional.softmax(outputs.logits, dim=-1)
         prediction = torch.argmax(probs, dim=-1).item()
         conf = torch.max(probs).item()
-    
     is_stable = prediction == 0
     return {
         "id": str(int(time.time())),
@@ -48,23 +42,29 @@ def predict_emotion(text):
         "lastInput": text
     }
 
-# Deklarasi Komponen (Menunjuk ke folder hasil build)
-component_path = os.path.join("frontend", "dist")
-component_func = components.declare_component("emosiku_ui", path=component_path)
+# --- BAGIAN 2: DEKLARASI KOMPONEN ---
+# Menggunakan path absolut agar server Cloud tidak bingung
+parent_dir = os.path.dirname(os.path.abspath(__file__))
+build_dir = os.path.join(parent_dir, "frontend", "dist")
 
-if "result" not in st.session_state:
-    st.session_state.result = {"status": "Menunggu Analisis"}
+if not os.path.exists(build_dir):
+    st.error(f"Folder build tidak ditemukan di: {build_dir}")
+else:
+    # Nama komponen baru untuk memaksa refresh cache
+    emosiku_ui = components.declare_component("emosiku_premium_v1", path=build_dir)
 
-# Tampilkan UI
-st.markdown("""<style>.stApp { margin: 0; padding: 0; } iframe { border: none !important; width: 100%; }</style>""", unsafe_allow_html=True)
+    if "result" not in st.session_state:
+        st.session_state.result = {"status": "Menunggu Analisis"}
 
-# Panggil komponen
-event_data = component_func(result=st.session_state.result)
+    st.markdown("""<style>.stApp { margin: 0; padding: 0; } iframe { border: none !important; width: 100%; height: 100vh; }</style>""", unsafe_allow_html=True)
 
-# Proses jika ada data dari React
-if event_data and event_data.get("action") == "analyze":
-    text = event_data.get("text")
-    if text:
-        with st.spinner("AI sedang berpikir..."):
-            st.session_state.result = predict_emotion(text)
-            st.rerun()
+    # Jalankan komponen
+    event_data = emosiku_ui(result=st.session_state.result)
+
+    # Logika Analisis
+    if event_data and event_data.get("action") == "analyze":
+        text = event_data.get("text")
+        if text:
+            with st.spinner("AI sedang menganalisis..."):
+                st.session_state.result = predict_emotion(text)
+                st.rerun()
