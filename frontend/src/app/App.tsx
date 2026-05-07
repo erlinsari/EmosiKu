@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Streamlit } from "streamlit-component-lib";
 import { Sparkles, Clock, Zap, Brain, User } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { GlassPanel } from './components/GlassPanel';
@@ -36,6 +35,15 @@ export default function App() {
 
   const [consultationLogs, setConsultationLogs] = useState<ConsultationLog[]>([]);
 
+  // Fungsi kirim data ke Streamlit (Versi Ringan)
+  const sendToStreamlit = (data: any) => {
+    window.parent.postMessage({
+      isStreamlitMessage: true,
+      type: "streamlit:setComponentValue",
+      value: data
+    }, "*");
+  };
+
   // Load data dari LocalStorage saat pertama kali buka
   useEffect(() => {
     const savedName = localStorage.getItem('emosiku_user_name');
@@ -51,22 +59,25 @@ export default function App() {
       setConsultationLogs(JSON.parse(savedLogs));
     }
 
-    // Beritahu Streamlit bahwa komponen sudah siap
-    Streamlit.setFrameHeight();
+    // Beritahu Streamlit tinggi frame
+    window.parent.postMessage({
+      isStreamlitMessage: true,
+      type: "streamlit:setFrameHeight",
+      height: document.body.scrollHeight
+    }, "*");
   }, []);
 
   // Mendengarkan hasil dari Python (Streamlit)
   useEffect(() => {
-    const onRender = (event: any) => {
-      const { data } = event;
+    const onMessage = (event: any) => {
+      const data = event.data;
       if (data.type === "streamlit:render") {
-        const { result } = data.args;
+        const result = data.args.result;
         if (result && result.status !== 'Menunggu Analisis') {
           setAnalysisResult(result);
           setIsAnalyzed(true);
           setIsAnalyzing(false);
           
-          // Tambahkan ke log jika ini adalah hasil baru (confidence berbeda)
           const isNew = !consultationLogs.some(log => log.id === result.id);
           if (isNew && result.id) {
             const newLog: ConsultationLog = {
@@ -84,9 +95,8 @@ export default function App() {
         }
       }
     };
-    window.addEventListener("message", onRender);
-    Streamlit.setFrameHeight();
-    return () => window.removeEventListener("message", onRender);
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
   }, [consultationLogs]);
 
   const handleSaveName = () => {
@@ -100,15 +110,10 @@ export default function App() {
   const handleAnalyze = async () => {
     if (consultationText.trim()) {
       setIsAnalyzing(true);
-      
-      // Kirim teks ke Python (Streamlit)
-      Streamlit.setComponentValue({
+      sendToStreamlit({
         action: 'analyze',
         text: consultationText
       });
-
-      // Simulasi loading singkat (Hasil asli akan dikirim balik oleh Python)
-      // Kita akan memantau kembalian dari Python di bagian useEffect atau via props
     }
   };
 
