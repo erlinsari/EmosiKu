@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
-import { Brain, TrendingUp, Calendar, Award } from 'lucide-react';
+import { Brain, TrendingUp, Calendar, Award, Sparkles } from 'lucide-react';
 import { GlassPanel } from './GlassPanel';
 
 const moodData = [

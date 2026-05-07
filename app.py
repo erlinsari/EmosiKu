@@ -3,6 +3,7 @@ import streamlit.components.v1 as components
 import os
 import re
 import subprocess
+import sys
 
 st.set_page_config(page_title="EmosiKu - AI Psychotherapy", layout="wide")
 
@@ -11,13 +12,14 @@ def get_premium_ui():
     assets_path = "assets"
     
     if not os.path.exists(index_path):
-        return "<h3>Error: File index.html tidak ditemukan.</h3>"
+        return "<h3>Error: File index.html tidak ditemukan di root.</h3>"
     
     with open(index_path, "r", encoding="utf-8") as f:
         html_content = f.read()
     
-    js_match = re.search(r'<script .*?src="\./assets/(index-.*?\.js)".*?></script>', html_content)
-    css_match = re.search(r'<link .*?href="\./assets/(index-.*?\.css)".*?>', html_content)
+    # Deteksi aset menggunakan regex yang lebih fleksibel
+    js_match = re.search(r'src="\./assets/(index-.*?\.js)"', html_content)
+    css_match = re.search(r'href="\./assets/(index-.*?\.css)"', html_content)
     
     if js_match and css_match:
         js_file = js_match.group(1)
@@ -28,29 +30,30 @@ def get_premium_ui():
         with open(os.path.join(assets_path, css_file), "r", encoding="utf-8") as f:
             css_code = f.read()
             
-        # PENTING: Escape karakter yang bisa merusak tag HTML
-        # Kita gunakan metode pembersihan yang lebih aman
+        # Pembersihan karakter rawan
         safe_js = js_code.replace('</script>', '<\\/script>')
         
+        # Injeksi Desain Premium
         new_js = f'<script type="module">{safe_js}</script>'
         new_css = f'<style>{css_code}</style>'
         
-        # Ganti tag asli dengan kode yang sudah dibersihkan
-        html_content = html_content.replace(js_match.group(0), new_js)
-        html_content = html_content.replace(css_match.group(0), new_css)
+        # Ganti tag lama dengan kode asli (Inline)
+        html_content = re.sub(r'<script type="module" crossorigin src="\./assets/index-.*?\.js"></script>', new_js, html_content)
+        html_content = re.sub(r'<link rel="stylesheet" crossorigin href="\./assets/index-.*?\.css">', new_css, html_content)
         
         return html_content
     
-    return "<h3>Error: Gagal memetakan aset desain.</h3>"
+    return f"<h3>Error: Aset gagal dimuat. Pastikan folder '{assets_path}' lengkap.</h3>"
 
-# Tampilkan UI
+# Render UI Premium
 premium_html = get_premium_ui()
 components.html(premium_html, height=1200, scrolling=True)
 
-# Jalankan API di latar belakang
+# Jalankan Mesin AI (api.py)
 if 'api_started' not in st.session_state:
     try:
-        subprocess.Popen(["python", "api.py"])
+        # Gunakan sys.executable agar kompatibel dengan Linux/Windows di cloud
+        subprocess.Popen([sys.executable, "api.py"])
         st.session_state.api_started = True
-    except:
-        pass
+    except Exception as e:
+        st.write(f"⚠️ Status AI: Sedang inisialisasi... ({e})")
