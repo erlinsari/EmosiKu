@@ -20,41 +20,16 @@ export default function App() {
   const [isAnalyzed, setIsAnalyzed] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState({
-    status: 'Kondisi Stabil',
-    sentiment: 'positive' as 'positive' | 'neutral' | 'negative',
-    description: 'Pola emosi Anda tampak seimbang dan sehat. AI mendeteksi stabilitas emosi yang kuat. Lanjutkan rutinitas perawatan diri Anda saat ini.',
-    wellness: 85,
-    stress: 15,
-    clarity: 78,
-    energy: 82
+    status: 'Menunggu Analisis',
+    sentiment: 'neutral' as 'positive' | 'neutral' | 'negative',
+    description: 'Silakan masukkan teks konsultasi Anda di atas untuk memulai analisis kesehatan emosional Anda.',
+    wellness: 0,
+    stress: 0,
+    clarity: 0,
+    energy: 0
   });
 
-  const [consultationLogs] = useState<ConsultationLog[]>([
-    {
-      id: '1',
-      time: '2 jam yang lalu',
-      input: 'Merasa sangat tertekan dengan deadline pekerjaan dan sulit membagi waktu...',
-      status: 'Terindikasi Gangguan',
-      sentiment: 'negative',
-      confidence: 87
-    },
-    {
-      id: '2',
-      time: 'Kemarin',
-      input: 'Hari yang sangat menyenangkan! Tugas selesai tepat waktu dan bisa kumpul keluarga...',
-      status: 'Kondisi Stabil',
-      sentiment: 'positive',
-      confidence: 94
-    },
-    {
-      id: '3',
-      time: '2 hari yang lalu',
-      input: 'Tidur tidak teratur, merasa lelah tapi pikiran terus berpacu di malam hari...',
-      status: 'Terindikasi Gangguan',
-      sentiment: 'negative',
-      confidence: 81
-    }
-  ]);
+  const [consultationLogs] = useState<ConsultationLog[]>([]);
 
   const handleAnalyze = async () => {
     if (consultationText.trim()) {
@@ -327,38 +302,36 @@ export default function App() {
           </h3>
 
           <div className="space-y-4">
-            {consultationLogs.map((log, index) => (
-              <motion.div
-                key={log.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <GlassPanel>
-                  <div className="p-6">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                            log.sentiment === 'positive'
-                              ? 'bg-emerald-100 text-emerald-600'
-                              : log.sentiment === 'negative'
-                              ? 'bg-rose-100 text-rose-600'
-                              : 'bg-violet-100 text-violet-600'
-                          }`}>
-                            {log.sentiment === 'positive' ? '😊' : log.sentiment === 'negative' ? '😔' : '😌'}
-                          </div>
-                          <div>
-                            <h4 className="text-slate-800 font-semibold">{log.status}</h4>
-                            <p className="text-slate-500 text-sm flex items-center gap-2">
-                              <Clock className="w-3 h-3" />
-                              {log.time}
-                            </p>
-                          </div>
+            {consultationLogs.length === 0 ? (
+              <div className="text-center py-10 text-slate-400">
+                Belum ada riwayat sesi. Mulailah konsultasi pertama Anda!
+              </div>
+            ) : (
+              consultationLogs.map((log) => (
+                <GlassPanel key={log.id} hoverable className="p-6">
+                  <div className="flex flex-col md:flex-row gap-6">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          log.sentiment === 'positive' ? 'bg-emerald-100' : 'bg-rose-100'
+                        }`}>
+                          {log.sentiment === 'positive' ? (
+                            <span className="text-2xl">😊</span>
+                          ) : (
+                            <span className="text-2xl">😔</span>
+                          )}
                         </div>
-                        <p className="text-slate-600 text-sm leading-relaxed">{log.input}</p>
+                        <div>
+                          <h4 className="text-slate-800 font-bold">{log.status}</h4>
+                          <p className="text-xs text-slate-500">{log.time}</p>
+                        </div>
                       </div>
+                      <p className="text-slate-600 text-sm line-clamp-2 italic">
+                        "{log.input}"
+                      </p>
+                    </div>
 
+                    <div className="flex items-center gap-6">
                       <div className="text-right">
                         <div className="text-2xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
                           {log.confidence}%
@@ -368,8 +341,8 @@ export default function App() {
                     </div>
                   </div>
                 </GlassPanel>
-              </motion.div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>

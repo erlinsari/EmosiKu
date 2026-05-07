@@ -50,26 +50,26 @@ export function Sidebar() {
               <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-white shadow-[0_0_10px_rgba(52,211,153,0.6)]" />
             </motion.div>
             <div>
-              <h3 className="text-slate-800 font-semibold">Sarah Mitchell</h3>
+              <h3 className="text-slate-800 font-semibold">Pengguna</h3>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-200">
             <div className="text-center">
               <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-                127
+                0
               </div>
               <div className="text-xs text-slate-500">Sesi</div>
             </div>
             <div className="text-center">
               <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-                89%
+                0%
               </div>
               <div className="text-xs text-slate-500">Kesehatan</div>
             </div>
             <div className="text-center">
               <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-                42
+                0
               </div>
               <div className="text-xs text-slate-500">Pencapaian</div>
             </div>
