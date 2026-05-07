@@ -4,20 +4,20 @@ import os
 import re
 import subprocess
 
-# KITA GUNAKAN VERSI PALING STABIL YANG PERNAH BERHASIL
 st.set_page_config(page_title="EmosiKu - AI Psychotherapy", layout="wide")
 
 def get_premium_ui():
-    dist_path = "frontend/dist"
-    index_path = os.path.join(dist_path, "index.html")
+    # KITA GUNAKAN FILE YANG ADA DI ROOT (Jalur paling aman saat ini)
+    index_path = "index.html"
+    assets_path = "assets"
     
     if not os.path.exists(index_path):
-        return "<h3>Error: Aset tidak ditemukan.</h3>"
+        return "<h3>Error: File index.html tidak ditemukan di root.</h3>"
     
     with open(index_path, "r", encoding="utf-8") as f:
         html_content = f.read()
     
-    # Deteksi aset secara otomatis (Metode ini yang paling berhasil sebelumnya)
+    # Deteksi aset di folder root/assets
     js_match = re.search(r'<script .*?src="\./assets/(index-.*?\.js)".*?></script>', html_content)
     css_match = re.search(r'<link .*?href="\./assets/(index-.*?\.css)".*?>', html_content)
     
@@ -25,12 +25,12 @@ def get_premium_ui():
         js_file = js_match.group(1)
         css_file = css_match.group(1)
         
-        with open(os.path.join(dist_path, "assets", js_file), "r", encoding="utf-8") as f:
+        with open(os.path.join(assets_path, js_file), "r", encoding="utf-8") as f:
             js_code = f.read()
-        with open(os.path.join(dist_path, "assets", css_file), "r", encoding="utf-8") as f:
+        with open(os.path.join(assets_path, css_file), "r", encoding="utf-8") as f:
             css_code = f.read()
             
-        # Gunakan sistem injeksi paling dasar (Tanpa f-string agar tidak bentrok)
+        # Injeksi stabil
         new_js = '<script type="module">' + js_code + '</script>'
         new_css = '<style>' + css_code + '</style>'
         
@@ -39,7 +39,7 @@ def get_premium_ui():
         
         return html_content
     
-    return "<h3>Error: Gagal memetakan aset desain.</h3>"
+    return f"<h3>Error: Gagal memetakan aset di {assets_path}.</h3>"
 
 # Render
 premium_html = get_premium_ui()
