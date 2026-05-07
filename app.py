@@ -51,6 +51,7 @@ def get_premium_ui(result=None):
     css_files = [f for f in os.listdir(assets_path) if f.endswith(".css")]
     
     result_json = json.dumps(result) if result else "null"
+    # Suntikkan hasil ke dalam dashboard
     injection = f'<script>window.initialResult = {result_json};</script>'
     
     with open(os.path.join(assets_path, js_files[0]), "r", encoding="utf-8") as f:
@@ -63,20 +64,22 @@ def get_premium_ui(result=None):
     final_html = final_html.replace('</body>', f'<script type="module">{js_code.replace("</script>", "<\\/script>")}</script></body>')
     return final_html
 
-# Inisialisasi State
+# 1. CEK SINYAL ANALISIS DARI URL
+query_params = st.query_params
+if "analyze" in query_params:
+    text_to_analyze = query_params["analyze"]
+    # Bersihkan URL segera agar tidak loop
+    st.query_params.clear()
+    with st.spinner("Sedang menganalisis emosi Anda..."):
+        st.session_state.current_result = analyze_emotion(text_to_analyze)
+        st.rerun()
+
+# 2. RENDER DASHBOARD (Kotak Curhat sudah ada di dalamnya kembali)
 if 'current_result' not in st.session_state:
     st.session_state.current_result = None
 
-# 1. Tampilkan Dashboard Mewah
 premium_html = get_premium_ui(st.session_state.current_result)
-components.html(premium_html, height=850, scrolling=True)
+# Hapus result setelah dipakai agar tidak muncul terus saat refresh manual
+st.session_state.current_result = None
 
-# 2. Input Curhat Asli Streamlit (Berada di Bawah Dashboard)
-st.markdown("---")
-st.subheader("📝 Bagikan Pikiran Anda")
-user_input = st.chat_input("Tuliskan perasaan atau pikiran Anda di sini...")
-
-if user_input:
-    with st.spinner("AI sedang menganalisis emosi Anda..."):
-        st.session_state.current_result = analyze_emotion(user_input)
-        st.rerun()
+components.html(premium_html, height=1200, scrolling=True)
