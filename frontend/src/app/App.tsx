@@ -1,13 +1,24 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Brain } from 'lucide-react';
+import { Sparkles, Brain } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { GlassPanel } from './components/GlassPanel';
 import { MoodAvatar } from './components/MoodAvatar';
 import { CircularProgress } from './components/CircularProgress';
 
+interface ConsultationLog {
+  id: string;
+  time: string;
+  input: string;
+  status: string;
+  sentiment: 'positive' | 'neutral' | 'negative';
+  confidence: number;
+}
+
 export default function App() {
+  const [consultationText, setConsultationText] = useState('');
   const [isAnalyzed, setIsAnalyzed] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState({
     status: '',
     sentiment: 'neutral' as 'positive' | 'neutral' | 'negative',
@@ -18,13 +29,64 @@ export default function App() {
     energy: 0
   });
 
+  const [consultationLogs, setConsultationLogs] = useState<ConsultationLog[]>([]);
+
+  // --- LOGIKA JEMBATAN RESMI STREAMLIT ---
   useEffect(() => {
-    const result = (window as any).initialResult;
-    if (result && result.status) {
-      setAnalysisResult(result);
-      setIsAnalyzed(true);
+    // Fungsi untuk menerima data dari Python
+    const onRender = (event: any) => {
+      const data = event.detail.args.result;
+      if (data && data.status) {
+        setAnalysisResult(data);
+        setIsAnalyzed(true);
+        setIsAnalyzing(false);
+        setConsultationText(data.originalText || '');
+        
+        const newLog: ConsultationLog = {
+          id: Date.now().toString(),
+          time: new Date().toLocaleTimeString('id-ID'),
+          input: data.originalText || '',
+          status: data.status,
+          sentiment: data.sentiment,
+          confidence: data.clarity
+        };
+        setConsultationLogs(prev => [newLog, ...prev]);
+      }
+      
+      // Auto-adjust tinggi agar tidak terpotong
+      const Streamlit = (window as any).Streamlit;
+      if (Streamlit) {
+        Streamlit.setFrameHeight();
+      }
+    };
+
+    // Dengarkan sinyal dari Streamlit
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'streamlit:render') {
+        onRender({ detail: { args: event.data.args } });
+      }
+    });
+
+    const Streamlit = (window as any).Streamlit;
+    if (Streamlit) {
+      Streamlit.setComponentReady();
+      Streamlit.setFrameHeight();
     }
   }, []);
+
+  const handleAnalyze = () => {
+    if (consultationText.trim() && !isAnalyzing) {
+      setIsAnalyzing(true);
+      const Streamlit = (window as any).Streamlit;
+      if (Streamlit) {
+        // KIRIM SINYAL KE PYTHON: "Hey Python, jalankan IndoBERT untuk teks ini!"
+        Streamlit.setComponentValue({
+          action: 'analyze',
+          text: consultationText
+        });
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative overflow-hidden">
@@ -42,10 +104,31 @@ export default function App() {
           </h2>
         </motion.div>
 
-        {/* Kotak Konsultasi (Sekarang Kosong karena sudah diisi oleh Tombol Stealth di Python) */}
         <GlassPanel glow className="mb-8">
-          <div className="p-8 h-80 flex flex-col justify-center items-center opacity-0 pointer-events-none">
-            {/* Space ini dibiarkan kosong agar Tombol Stealth bisa menempati posisinya */}
+          <div className="p-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="w-5 h-5 text-violet-600" />
+              <label className="text-slate-800 font-semibold">Konsultasi</label>
+            </div>
+            
+            <textarea
+              value={consultationText}
+              onChange={(e) => setConsultationText(e.target.value)}
+              placeholder="Ekspresikan diri Anda secara bebas..."
+              className="w-full h-40 bg-white/60 border border-violet-200 rounded-2xl px-6 py-4 text-slate-800 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-300/30 resize-none backdrop-blur-sm transition-all"
+            />
+            
+            <motion.button
+              onClick={handleAnalyze}
+              disabled={isAnalyzing}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="mt-6 relative group"
+            >
+              <div className="relative px-10 py-4 bg-gradient-to-r from-violet-600 to-cyan-600 rounded-2xl shadow-[0_0_40px_rgba(139,92,246,0.6)] text-white font-bold flex items-center gap-2">
+                {isAnalyzing ? "Memproses..." : <><Sparkles className="w-5 h-5" /> Analisis Kondisi Emosi</>}
+              </div>
+            </motion.button>
           </div>
         </GlassPanel>
 
