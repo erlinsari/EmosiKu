@@ -9,6 +9,10 @@ from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFacto
 
 st.set_page_config(page_title="EmosiKu - AI Psychotherapy", layout="wide")
 
+# Jalur Absolut agar tidak Error di Cloud
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DIST_DIR = os.path.join(BASE_DIR, "frontend", "dist")
+
 @st.cache_resource
 def load_ai_engine():
     MODEL_NAME = "indobenchmark/indobert-base-p1"
@@ -40,23 +44,27 @@ def analyze_emotion(text):
     }
 
 def get_premium_ui(result=None):
-    dist_path = "frontend/dist"
-    index_path = os.path.join(dist_path, "index.html")
-    assets_path = os.path.join(dist_path, "assets")
+    index_path = os.path.join(DIST_DIR, "index.html")
+    assets_dir = os.path.join(DIST_DIR, "assets")
+    
+    if not os.path.exists(index_path):
+        return f"<h3>Error: Desain tidak ditemukan di {DIST_DIR}.</h3>"
     
     with open(index_path, "r", encoding="utf-8") as f:
         html_content = f.read()
     
-    js_files = [f for f in os.listdir(assets_path) if f.endswith(".js")]
-    css_files = [f for f in os.listdir(assets_path) if f.endswith(".css")]
+    js_files = [f for f in os.listdir(assets_dir) if f.endswith(".js")]
+    css_files = [f for f in os.listdir(assets_dir) if f.endswith(".css")]
     
+    if not js_files:
+        return "<h3>Error: File JavaScript tidak ditemukan.</h3>"
+        
     result_json = json.dumps(result) if result else "null"
-    # Suntikkan hasil ke dalam dashboard
     injection = f'<script>window.initialResult = {result_json};</script>'
     
-    with open(os.path.join(assets_path, js_files[0]), "r", encoding="utf-8") as f:
+    with open(os.path.join(assets_dir, js_files[0]), "r", encoding="utf-8") as f:
         js_code = f.read()
-    with open(os.path.join(assets_path, css_files[0]), "r", encoding="utf-8") as f:
+    with open(os.path.join(assets_dir, css_files[0]), "r", encoding="utf-8") as f:
         css_code = f.read()
     
     final_html = html_content.replace('<head>', f'<head>{injection}')
@@ -64,22 +72,22 @@ def get_premium_ui(result=None):
     final_html = final_html.replace('</body>', f'<script type="module">{js_code.replace("</script>", "<\\/script>")}</script></body>')
     return final_html
 
-# 1. CEK SINYAL ANALISIS DARI URL
-query_params = st.query_params
-if "analyze" in query_params:
-    text_to_analyze = query_params["analyze"]
-    # Bersihkan URL segera agar tidak loop
+# Logika URL Bridge
+if "analyze" in st.query_params:
+    text = st.query_params["analyze"]
     st.query_params.clear()
     with st.spinner("Sedang menganalisis emosi Anda..."):
-        st.session_state.current_result = analyze_emotion(text_to_analyze)
+        st.session_state.current_result = analyze_emotion(text)
         st.rerun()
 
-# 2. RENDER DASHBOARD (Kotak Curhat sudah ada di dalamnya kembali)
 if 'current_result' not in st.session_state:
     st.session_state.current_result = None
 
+# Render
 premium_html = get_premium_ui(st.session_state.current_result)
-# Hapus result setelah dipakai agar tidak muncul terus saat refresh manual
 st.session_state.current_result = None
 
-components.html(premium_html, height=1200, scrolling=True)
+if "Error:" in premium_html:
+    st.error(premium_html)
+else:
+    components.html(premium_html, height=1200, scrolling=True)
