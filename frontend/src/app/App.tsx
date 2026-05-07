@@ -20,41 +20,16 @@ export default function App() {
   const [isAnalyzed, setIsAnalyzed] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState({
-    status: 'Kondisi Stabil',
-    sentiment: 'positive' as 'positive' | 'neutral' | 'negative',
-    description: 'Pola emosi Anda tampak seimbang dan sehat. AI mendeteksi stabilitas emosi yang kuat. Lanjutkan rutinitas perawatan diri Anda saat ini.',
-    wellness: 85,
-    stress: 15,
-    clarity: 78,
-    energy: 82
+    status: '',
+    sentiment: 'neutral' as 'positive' | 'neutral' | 'negative',
+    description: '',
+    wellness: 0,
+    stress: 0,
+    clarity: 0,
+    energy: 0
   });
 
-  const [consultationLogs] = useState<ConsultationLog[]>([
-    {
-      id: '1',
-      time: '2 jam yang lalu',
-      input: 'Merasa sangat tertekan dengan deadline pekerjaan dan sulit membagi waktu...',
-      status: 'Terindikasi Gangguan',
-      sentiment: 'negative',
-      confidence: 87
-    },
-    {
-      id: '2',
-      time: 'Kemarin',
-      input: 'Hari yang sangat menyenangkan! Tugas selesai tepat waktu dan bisa kumpul keluarga...',
-      status: 'Kondisi Stabil',
-      sentiment: 'positive',
-      confidence: 94
-    },
-    {
-      id: '3',
-      time: '2 hari yang lalu',
-      input: 'Tidur tidak teratur, merasa lelah tapi pikiran terus berpacu di malam hari...',
-      status: 'Terindikasi Gangguan',
-      sentiment: 'negative',
-      confidence: 81
-    }
-  ]);
+  const [consultationLogs] = useState<ConsultationLog[]>([]);
 
   const handleAnalyze = async () => {
     if (consultationText.trim()) {

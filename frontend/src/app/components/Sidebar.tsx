@@ -54,19 +54,19 @@ export function Sidebar() {
         <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-200">
           <div className="text-center">
             <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-              127
+              0
             </div>
             <div className="text-xs text-slate-500">Sesi</div>
           </div>
           <div className="text-center">
             <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-              89%
+              0%
             </div>
             <div className="text-xs text-slate-500">Kesehatan</div>
           </div>
           <div className="text-center">
             <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-              42
+              0
             </div>
             <div className="text-xs text-slate-500">Pencapaian</div>
           </div>
