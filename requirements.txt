@@ -5,5 +5,4 @@ Sastrawi
 fastapi
 uvicorn
 pydantic
-re-core
 pandas
