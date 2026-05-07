@@ -119,32 +119,6 @@ export function Sidebar() {
         </div>
       </GlassPanel>
 
-      {/* Quick Stats */}
-      <GlassPanel>
-        <div className="p-6 space-y-3">
-          <h3 className="text-slate-800 font-semibold mb-4">Statistik Cepat</h3>
-
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-violet-600" />
-            </div>
-            <div className="flex-1">
-              <div className="text-sm text-slate-500">Sesi Terakhir</div>
-              <div className="text-slate-800 font-semibold">-</div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-100 flex items-center justify-center">
-              <Award className="w-5 h-5 text-cyan-600" />
-            </div>
-            <div className="flex-1">
-              <div className="text-sm text-slate-500">Pencapaian</div>
-              <div className="text-slate-800 font-semibold">0 Terbuka</div>
-            </div>
-          </div>
-        </div>
-      </GlassPanel>
     </div>
   );
 }
