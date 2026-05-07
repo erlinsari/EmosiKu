@@ -44,12 +44,15 @@ def get_prediction(text):
     }
 
 # --- UI COMPONENT ---
-# Gunakan folder 'web' yang sudah kita siapkan di root
-if not os.path.exists("web"):
-    st.error("Folder 'web' tidak ditemukan!")
+# Menggunakan alamat lengkap agar server tidak tersesat
+parent_dir = os.path.dirname(os.path.abspath(__file__))
+build_dir = os.path.join(parent_dir, "web")
+
+if not os.path.exists(build_dir):
+    st.error(f"Folder 'web' tidak ditemukan di: {build_dir}")
 else:
-    # Nama komponen unik untuk memaksa reload
-    ui_component = components.declare_component("emosiku_final_v1", path="web")
+    # Nama komponen baru untuk memaksa refresh total
+    ui_component = components.declare_component("emosiku_premium_final_fixed", path=build_dir)
 
     if "result" not in st.session_state:
         st.session_state.result = {"status": "Menunggu Analisis"}
