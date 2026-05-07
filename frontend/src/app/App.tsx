@@ -20,9 +20,9 @@ export default function App() {
   const [isAnalyzed, setIsAnalyzed] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState({
-    status: 'Emotionally Balanced',
+    status: 'Kondisi Stabil',
     sentiment: 'positive' as 'positive' | 'neutral' | 'negative',
-    description: 'Your emotional state appears balanced and healthy. The AI detected positive sentiment patterns with strong emotional stability indicators. Continue maintaining your current self-care routines.',
+    description: 'Pola emosi Anda tampak seimbang dan sehat. AI mendeteksi stabilitas emosi yang kuat. Lanjutkan rutinitas perawatan diri Anda saat ini.',
     wellness: 85,
     stress: 15,
     clarity: 78,
@@ -32,25 +32,25 @@ export default function App() {
   const [consultationLogs] = useState<ConsultationLog[]>([
     {
       id: '1',
-      time: '2 hours ago',
-      input: 'Feeling overwhelmed with work deadlines and struggling to maintain work-life balance...',
-      status: 'Moderate Stress',
+      time: '2 jam yang lalu',
+      input: 'Merasa sangat tertekan dengan deadline pekerjaan dan sulit membagi waktu...',
+      status: 'Terindikasi Gangguan',
       sentiment: 'negative',
       confidence: 87
     },
     {
       id: '2',
-      time: 'Yesterday',
-      input: 'Had a wonderful day today! Completed my tasks and spent quality time with family...',
-      status: 'Optimal State',
+      time: 'Kemarin',
+      input: 'Hari yang sangat menyenangkan! Tugas selesai tepat waktu dan bisa kumpul keluarga...',
+      status: 'Kondisi Stabil',
       sentiment: 'positive',
       confidence: 94
     },
     {
       id: '3',
-      time: '2 days ago',
-      input: 'Sleep has been inconsistent, feeling tired but mind is racing at night...',
-      status: 'Mild Anxiety',
+      time: '2 hari yang lalu',
+      input: 'Tidur tidak teratur, merasa lelah tapi pikiran terus berpacu di malam hari...',
+      status: 'Terindikasi Gangguan',
       sentiment: 'negative',
       confidence: 81
     }
@@ -59,11 +59,37 @@ export default function App() {
   const handleAnalyze = async () => {
     if (consultationText.trim()) {
       setIsAnalyzing(true);
-      // Simulate AI analysis
-      setTimeout(() => {
-        setIsAnalyzing(false);
+      try {
+        const response = await fetch('http://localhost:8000/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: consultationText })
+        });
+        
+        const data = await response.json();
+        
+        {/* Hasil Analisis */}
+        const isStable = data.prediction === 0;
+        
+        setAnalysisResult({
+          status: isStable ? 'Kondisi Stabil' : 'Terindikasi Gangguan Psikologis',
+          sentiment: isStable ? 'positive' : 'negative',
+          description: isStable 
+            ? 'Pola emosi Anda memancarkan keseimbangan dan energi positif. Tidak terdeteksi indikasi gangguan mental yang signifikan. Pertahankan kesehatan mental Anda.'
+            : 'AI kami mendeteksi pola dalam bahasa Anda yang mungkin mengindikasikan kecemasan atau beban emosional yang berat. Sangat disarankan untuk berbagi perasaan ini dengan profesional atau teman terpercaya.',
+          wellness: Math.round(data.probabilities.stable * 100),
+          stress: Math.round(data.probabilities.anxiety * 100),
+          clarity: Math.round(data.confidence * 100),
+          energy: isStable ? 85 : 45
+        });
+
         setIsAnalyzed(true);
-      }, 2000);
+      } catch (error) {
+        console.error("Gagal melakukan analisis:", error);
+        alert("Gagal menghubungi server AI. Pastikan api.py sudah dijalankan.");
+      } finally {
+        setIsAnalyzing(false);
+      }
     }
   };
 
@@ -101,27 +127,27 @@ export default function App() {
           className="mb-8"
         >
           <h2 className="text-4xl font-bold text-slate-800 mb-2" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-            AI Mental Health Analysis
+            Analisis Kesehatan Mental AI
           </h2>
-          <p className="text-slate-600">Share your thoughts and let our AI provide insights</p>
+          <p className="text-slate-600">Bagikan pikiran Anda dan biarkan AI kami memberikan wawasan</p>
         </motion.div>
 
-        {/* Consultation Input */}
+        {/* Input Konsultasi */}
         <GlassPanel glow className="mb-8">
           <div className="p-8">
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="w-5 h-5 text-violet-600" />
-              <label className="text-slate-800 font-semibold">Consultation</label>
+              <label className="text-slate-800 font-semibold">Konsultasi</label>
             </div>
 
             <textarea
               value={consultationText}
               onChange={(e) => setConsultationText(e.target.value)}
-              placeholder="Express yourself freely... Share your thoughts, feelings, concerns, or anything on your mind. Our AI will analyze your emotional state and provide personalized insights."
+              placeholder="Ekspresikan diri Anda secara bebas... Bagikan pikiran, perasaan, kekhawatiran, atau apa pun yang ada di pikiran Anda. AI kami akan menganalisis kondisi emosional Anda."
               className="w-full h-40 bg-white/60 border border-violet-200 rounded-2xl px-6 py-4 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-300/30 resize-none backdrop-blur-sm transition-all"
             />
 
-            {/* 3D Analyze Button */}
+            {/* Tombol Analisis 3D */}
             <motion.button
               onClick={handleAnalyze}
               disabled={isAnalyzing}
@@ -150,12 +176,12 @@ export default function App() {
                       >
                         <Zap className="w-5 h-5" />
                       </motion.div>
-                      Analyzing...
+                      Menganalisis...
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-5 h-5" />
-                      Analyze Emotional State
+                      Analisis Kondisi Emosi
                     </>
                   )}
                 </span>
@@ -188,7 +214,7 @@ export default function App() {
                     >
                       <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 border border-emerald-300 rounded-full mb-4">
                         <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                        <span className="text-emerald-700 text-sm font-semibold">AI Analysis Complete</span>
+                        <span className="text-emerald-700 text-sm font-semibold">Analisis AI Selesai</span>
                       </div>
 
                       <h3 className="text-3xl font-bold text-slate-800 mb-4" style={{ fontFamily: 'Clash Display, sans-serif' }}>
@@ -202,12 +228,12 @@ export default function App() {
                       <div className="flex items-center gap-4 mt-6 pt-6 border-t border-slate-200">
                         <div className="flex items-center gap-2">
                           <Brain className="w-4 h-4 text-violet-600" />
-                          <span className="text-sm text-slate-500">AI Confidence:</span>
-                          <span className="text-slate-800 font-semibold">94%</span>
+                          <span className="text-sm text-slate-500">Keyakinan AI:</span>
+                          <span className="text-slate-800 font-semibold">{analysisResult.clarity}%</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4 text-cyan-600" />
-                          <span className="text-sm text-slate-500">Analyzed in 1.2s</span>
+                          <span className="text-sm text-slate-500">Dianalisis dalam 1.2 detik</span>
                         </div>
                       </div>
                     </motion.div>
@@ -227,7 +253,7 @@ export default function App() {
                 <CircularProgress
                   value={analysisResult.wellness}
                   color="url(#wellness-gradient)"
-                  label="Wellness"
+                  label="Kesejahteraan"
                   icon={<Sparkles className="w-6 h-6 text-emerald-400" />}
                 />
                 <svg width="0" height="0">
@@ -244,7 +270,7 @@ export default function App() {
                 <CircularProgress
                   value={100 - analysisResult.stress}
                   color="url(#calm-gradient)"
-                  label="Calm"
+                  label="Ketenangan"
                   icon={<span className="text-2xl">🧘</span>}
                 />
                 <svg width="0" height="0">
@@ -261,7 +287,7 @@ export default function App() {
                 <CircularProgress
                   value={analysisResult.clarity}
                   color="url(#clarity-gradient)"
-                  label="Clarity"
+                  label="Kejelasan"
                   icon={<span className="text-2xl">💎</span>}
                 />
                 <svg width="0" height="0">
@@ -278,7 +304,7 @@ export default function App() {
                 <CircularProgress
                   value={analysisResult.energy}
                   color="url(#energy-gradient)"
-                  label="Energy"
+                  label="Energi"
                   icon={<Zap className="w-6 h-6 text-yellow-400" />}
                 />
                 <svg width="0" height="0">
@@ -297,7 +323,7 @@ export default function App() {
         {/* Consultation History - Premium Cards */}
         <div className="mt-8">
           <h3 className="text-2xl font-bold text-slate-800 mb-6" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-            Recent Sessions
+            Sesi Terakhir
           </h3>
 
           <div className="space-y-4">
@@ -337,7 +363,7 @@ export default function App() {
                         <div className="text-2xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
                           {log.confidence}%
                         </div>
-                        <div className="text-xs text-slate-500">Confidence</div>
+                        <div className="text-xs text-slate-500">Keyakinan</div>
                       </div>
                     </div>
                   </div>

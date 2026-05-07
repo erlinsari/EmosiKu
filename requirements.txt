@@ -1,0 +1,9 @@
+streamlit
+transformers
+torch
+Sastrawi
+fastapi
+uvicorn
+pydantic
+re-core
+pandas

@@ -51,7 +51,6 @@ export function Sidebar() {
             </motion.div>
             <div>
               <h3 className="text-slate-800 font-semibold">Sarah Mitchell</h3>
-              <p className="text-slate-600 text-sm">Premium Member</p>
             </div>
           </div>
 
@@ -60,19 +59,19 @@ export function Sidebar() {
               <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
                 127
               </div>
-              <div className="text-xs text-slate-500">Sessions</div>
+              <div className="text-xs text-slate-500">Sesi</div>
             </div>
             <div className="text-center">
               <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
                 89%
               </div>
-              <div className="text-xs text-slate-500">Health</div>
+              <div className="text-xs text-slate-500">Kesehatan</div>
             </div>
             <div className="text-center">
               <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Clash Display, sans-serif' }}>
                 42
               </div>
-              <div className="text-xs text-slate-500">Streak</div>
+              <div className="text-xs text-slate-500">Pencapaian</div>
             </div>
           </div>
         </div>
@@ -84,9 +83,9 @@ export function Sidebar() {
           <div className="flex items-center justify-between">
             <h3 className="text-slate-800 font-semibold flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-cyan-600" />
-              Mood Journey
+              Jejak Emosi
             </h3>
-            <span className="text-xs text-slate-500">7 Days</span>
+            <span className="text-xs text-slate-500">7 Hari</span>
           </div>
 
           <div className="h-32 relative">
@@ -112,7 +111,7 @@ export function Sidebar() {
           </div>
 
           <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-            <span className="text-sm text-slate-500">Current Trend</span>
+            <span className="text-sm text-slate-500">Tren Saat Ini</span>
             <span className="text-emerald-600 text-sm font-semibold flex items-center gap-1">
               <TrendingUp className="w-4 h-4" />
               +12%
@@ -124,15 +123,15 @@ export function Sidebar() {
       {/* Quick Stats */}
       <GlassPanel>
         <div className="p-6 space-y-3">
-          <h3 className="text-slate-800 font-semibold mb-4">Quick Stats</h3>
+          <h3 className="text-slate-800 font-semibold mb-4">Statistik Cepat</h3>
 
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
               <Calendar className="w-5 h-5 text-violet-600" />
             </div>
             <div className="flex-1">
-              <div className="text-sm text-slate-500">Last Session</div>
-              <div className="text-slate-800 font-semibold">2 hours ago</div>
+              <div className="text-sm text-slate-500">Sesi Terakhir</div>
+              <div className="text-slate-800 font-semibold">2 jam yang lalu</div>
             </div>
           </div>
 
@@ -141,8 +140,8 @@ export function Sidebar() {
               <Award className="w-5 h-5 text-cyan-600" />
             </div>
             <div className="flex-1">
-              <div className="text-sm text-slate-500">Achievements</div>
-              <div className="text-slate-800 font-semibold">8 Unlocked</div>
+              <div className="text-sm text-slate-500">Pencapaian</div>
+              <div className="text-slate-800 font-semibold">8 Terbuka</div>
             </div>
           </div>
         </div>
