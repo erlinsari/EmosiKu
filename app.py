@@ -1,8 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import os
-import re
-import base64
+import json
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
@@ -27,57 +26,55 @@ if 'api_process' not in st.session_state:
     st.session_state.api_process = subprocess.Popen(["python", "api.py"])
     time.sleep(3)
 
-# --- BAGIAN 3: SERVE TAMPILAN PREMIUM (Metode Blob URL) ---
+# --- BAGIAN 3: SERVE TAMPILAN PREMIUM ---
 def get_premium_ui():
-    dist_path = "frontend/dist"
-    index_path = os.path.join(dist_path, "index.html")
+    assets_path = "frontend/dist/assets"
     
-    if not os.path.exists(index_path):
-        return "<h3>Error: Folder dist tidak ditemukan.</h3>"
+    if not os.path.exists(assets_path):
+        return "<h3 style='color:white;'>Error: Folder assets tidak ditemukan. Harap jalankan build.</h3>"
     
-    with open(index_path, "r", encoding="utf-8") as f:
-        html_content = f.read()
+    # Cari file JS dan CSS terbaru
+    js_file = next((f for f in os.listdir(assets_path) if f.startswith("index-") and f.endswith(".js")), None)
+    css_file = next((f for f in os.listdir(assets_path) if f.startswith("index-") and f.endswith(".css")), None)
     
-    js_match = re.search(r'src="\./assets/(index-.*?\.js)"', html_content)
-    css_match = re.search(r'href="\./assets/(index-.*?\.css)"', html_content)
-    
-    if js_match and css_match:
-        js_file = js_match.group(1)
-        css_file = css_match.group(1)
-        
-        with open(os.path.join(dist_path, "assets", js_file), "rb") as f:
-            js_base64 = base64.b64encode(f.read()).decode()
-        with open(os.path.join(dist_path, "assets", css_file), "rb") as f:
-            css_base64 = base64.b64encode(f.read()).decode()
+    if js_file and css_file:
+        with open(os.path.join(assets_path, js_file), "r", encoding="utf-8") as f:
+            js_code = f.read()
+        with open(os.path.join(assets_path, css_file), "r", encoding="utf-8") as f:
+            css_code = f.read()
             
+        # Gunakan json.dumps untuk keamanan karakter spesial
+        js_json = json.dumps(js_code)
+        css_json = json.dumps(css_code)
+        
         final_html = f"""
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="UTF-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <title>EmosiKu</title>
             <style>
                 html, body, #root {{ height: 100%; margin: 0; padding: 0; background: #ffffff; }}
             </style>
             <script>
-                // Load CSS via Blob
-                const cssData = atob("{css_base64}");
-                const cssBlob = new Blob([cssData], {{ type: 'text/css' }});
-                const cssUrl = URL.createObjectURL(cssBlob);
-                const link = document.createElement('link');
-                link.rel = 'stylesheet';
-                link.href = cssUrl;
-                document.head.appendChild(link);
+                (function() {{
+                    const cssCode = {css_json};
+                    const cssBlob = new Blob([cssCode], {{ type: 'text/css' }});
+                    const cssUrl = URL.createObjectURL(cssBlob);
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = cssUrl;
+                    document.head.appendChild(link);
 
-                // Load JS via Blob Module
-                async function loadApp() {{
-                    const jsData = atob("{js_base64}");
-                    const jsBlob = new Blob([jsData], {{ type: 'text/javascript' }});
+                    const jsCode = {js_json};
+                    const jsBlob = new Blob([jsCode], {{ type: 'text/javascript' }});
                     const jsUrl = URL.createObjectURL(jsBlob);
-                    await import(jsUrl);
-                }}
-                window.onload = loadApp;
+                    
+                    const script = document.createElement('script');
+                    script.type = 'module';
+                    script.src = jsUrl;
+                    document.head.appendChild(script);
+                }})();
             </script>
         </head>
         <body>
@@ -87,7 +84,7 @@ def get_premium_ui():
         """
         return final_html
     
-    return "<h3>Error: Gagal memetakan aset.</h3>"
+    return "<h3 style='color:white;'>Error: Gagal mendeteksi file index di folder assets.</h3>"
 
 # Tampilkan UI
 st.markdown("""
