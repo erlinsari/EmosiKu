@@ -53,13 +53,8 @@ export default function App() {
   const handleAnalyze = () => {
     if (consultationText.trim()) {
       const encodedText = encodeURIComponent(consultationText);
-      // PAKSA: Gunakan window.top untuk menembus semua level Iframe
-      try {
-        window.top.location.search = `?analyze=${encodedText}`;
-      } catch (e) {
-        // Fallback jika window.top diblokir total
-        window.parent.location.href = `./?analyze=${encodedText}`;
-      }
+      // GUNAKAN TEKNIK SUPER: Navigasi langsung ke jendela teratas
+      window.open(`./?analyze=${encodedText}`, "_top");
     }
   };
 
