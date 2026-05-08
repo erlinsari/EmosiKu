@@ -1,22 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Sparkles, Brain } from 'lucide-react';
+import { Brain } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { GlassPanel } from './components/GlassPanel';
 import { MoodAvatar } from './components/MoodAvatar';
 import { CircularProgress } from './components/CircularProgress';
 
-interface ConsultationLog {
-  id: string;
-  time: string;
-  input: string;
-  status: string;
-  sentiment: 'positive' | 'neutral' | 'negative';
-  confidence: number;
-}
-
 export default function App() {
-  const [consultationText, setConsultationText] = useState('');
   const [isAnalyzed, setIsAnalyzed] = useState(false);
   const [analysisResult, setAnalysisResult] = useState({
     status: '',
@@ -28,30 +18,13 @@ export default function App() {
     energy: 0
   });
 
-  const [consultationLogs, setConsultationLogs] = useState<ConsultationLog[]>([]);
-
   useEffect(() => {
-    // Tangkap hasil yang disuntikkan Python
     const result = (window as any).initialResult;
     if (result && result.status) {
       setAnalysisResult(result);
       setIsAnalyzed(true);
-      setConsultationText(result.originalText || '');
-      
-      const newLog: ConsultationLog = {
-        id: Date.now().toString(),
-        time: new Date().toLocaleTimeString('id-ID'),
-        input: result.originalText || '',
-        status: result.status,
-        sentiment: result.sentiment,
-        confidence: result.clarity
-      };
-      setConsultationLogs(prev => [newLog, ...prev]);
     }
   }, []);
-
-  // Persiapkan Link Jalur Tol yang lebih kuat untuk Cloud
-  const analyzeUrl = `?analyze=${encodeURIComponent(consultationText)}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative overflow-hidden">
@@ -63,43 +36,21 @@ export default function App() {
       <Sidebar />
 
       <div className="ml-80 p-8 relative z-10">
+        {/* TAMPILAN HEADER (Selalu Ada) */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <h2 className="text-4xl font-bold text-slate-800 mb-2" style={{ fontFamily: 'Clash Display, sans-serif' }}>
             Analisis Kesehatan Mental AI
           </h2>
         </motion.div>
 
-        <GlassPanel glow className="mb-8">
-          <div className="p-8">
-            <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="w-5 h-5 text-violet-600" />
-              <label className="text-slate-800 font-semibold">Konsultasi</label>
-            </div>
-            
-            <textarea
-              value={consultationText}
-              onChange={(e) => setConsultationText(e.target.value)}
-              placeholder="Ekspresikan diri Anda secara bebas..."
-              className="w-full h-40 bg-white/60 border border-violet-200 rounded-2xl px-6 py-4 text-slate-800 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-300/30 resize-none backdrop-blur-sm transition-all"
-            />
-            
-            {/* TOMBOL JALUR TOL: Menggunakan <a> tag agar pasti bisa diklik di Cloud */}
-            <motion.a
-              href={consultationText.trim() ? analyzeUrl : '#'}
-              target="_parent"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="mt-6 inline-block relative group no-underline"
-            >
-              <div className="relative px-10 py-4 bg-gradient-to-r from-violet-600 to-cyan-600 rounded-2xl shadow-[0_0_40px_rgba(139,92,246,0.6)] text-white font-bold flex items-center gap-2">
-                <Sparkles className="w-5 h-5" /> Analisis Kondisi Emosi
-              </div>
-            </motion.a>
-          </div>
-        </GlassPanel>
+        {/* AREA KOSONG UNTUK INPUT NATIVE (Agar sinkron dengan app.py) */}
+        {!isAnalyzed && (
+          <div className="h-80" /> 
+        )}
 
+        {/* TAMPILAN HASIL (Hanya muncul jika sudah dianalisis) */}
         {isAnalyzed && (
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="space-y-8">
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="space-y-8 mt-40">
             <GlassPanel>
               <div className="p-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">

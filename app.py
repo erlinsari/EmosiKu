@@ -8,14 +8,47 @@ import glob
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
 
-# 1. Konfigurasi Halaman
+# 1. Konfigurasi Halaman Mewah
 st.set_page_config(page_title="EmosiKu - AI Assistant", layout="wide", initial_sidebar_state="collapsed")
 
+# --- SUNTIKAN CSS MEWAH (Mempercantik Elemen Asli Agar Senada dengan React) ---
 st.markdown("""
 <style>
-    .block-container { padding: 4rem 0 0 0 !important; max-width: 100% !important; }
-    [data-testid="stAppViewContainer"] { background: white !important; }
-    iframe { border: none !important; width: 100% !important; }
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+    
+    .block-container { padding: 0 !important; max-width: 100% !important; }
+    [data-testid="stAppViewContainer"] { background: #f8fafc !important; }
+    
+    /* Percantik TextArea agar Glassmorphism */
+    .stTextArea textarea {
+        background: rgba(255, 255, 255, 0.7) !important;
+        backdrop-filter: blur(10px) !important;
+        border: 1px solid rgba(139, 92, 246, 0.2) !important;
+        border-radius: 20px !important;
+        padding: 1.5rem !important;
+        font-family: 'Outfit', sans-serif !important;
+        color: #1e293b !important;
+    }
+    
+    /* Percantik Tombol agar Mewah (Ungu-Biru) */
+    .stButton button {
+        background: linear-gradient(90deg, #7c3aed 0%, #0891b2 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 15px !important;
+        padding: 0.8rem 2.5rem !important;
+        font-weight: 700 !important;
+        font-family: 'Outfit', sans-serif !important;
+        box-shadow: 0 10px 30px rgba(139,92,246,0.4) !important;
+        transition: all 0.3s ease !important;
+        width: 100% !important;
+        max-width: 350px;
+    }
+    
+    .stButton button:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 15px 45px rgba(139,92,246,0.5) !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -24,7 +57,7 @@ DIST_DIR = os.path.join(BASE_DIR, "frontend", "dist")
 
 @st.cache_resource
 def load_ai_engine():
-    # Model RoBERTa Indonesia (Akurat & Cerdas)
+    # Model Terlatih (IndoRoBERTa)
     MODEL_NAME = "w11wo/indonesian-roberta-base-sentiment-classifier"
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
@@ -82,24 +115,26 @@ def get_premium_ui(result=None):
     except Exception as e:
         return f"<h3>Error: {str(e)}</h3>"
 
-# --- LOGIKA PENERIMA (SANGAT KRUSIAL) ---
-if 'last_result' not in st.session_state:
-    st.session_state.last_result = None
+# --- TAMPILKAN HEADER & SIDEBAR PREMIUM ---
+if 'res' not in st.session_state:
+    st.session_state.res = None
 
-# Ambil query parameter
-q = st.query_params
-if "analyze" in q:
-    txt = q["analyze"]
-    # JANGAN LANGSUNG CLEAR. Simpan dulu ke session state.
-    st.session_state.last_result = analyze_emotion(txt)
-    # Clear query param agar tidak looping, lalu rerun
-    st.query_params.clear()
-    st.rerun()
+# 1. Tampilkan Bagian Atas Dashboard (Sidebar & Header)
+premium_html = get_premium_ui(st.session_state.res)
+components.html(premium_html, height=450) # Tinggi pas untuk Header saja
 
-# Tampilkan UI
-premium_html = get_premium_ui(st.session_state.last_result)
-# Reset setelah UI dirender agar tidak muncul terus saat refresh biasa
-# Tapi jangan langsung None di sini jika ingin persistent. 
-# Kita biarkan saja, dia akan reset saat user klik tombol lagi.
+# 2. Sisipkan Elemen Interaktif Asli (PASTI BISA DIKLIK)
+st.markdown("<div style='padding: 0 420px; margin-top: -150px;'>", unsafe_allow_html=True)
+user_text = st.text_area("input", placeholder="Ekspresikan perasaan Anda di sini...", height=200, label_visibility="collapsed")
+if st.button("✨ Analisis Kondisi Emosi"):
+    if user_text.strip():
+        with st.spinner("AI sedang menganalisis..."):
+            st.session_state.res = analyze_emotion(user_text)
+            st.rerun()
+st.markdown("</div>", unsafe_allow_html=True)
 
-components.html(premium_html, height=1500, scrolling=True)
+# 3. Tampilkan Hasil (Jika Ada) di Bawah
+if st.session_state.res:
+    # Render ulang UI dengan hasil
+    premium_html_with_res = get_premium_ui(st.session_state.res)
+    components.html(premium_html_with_res, height=1100)
