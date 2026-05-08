@@ -50,8 +50,8 @@ export default function App() {
     }
   }, []);
 
-  // Persiapkan Link Jalur Tol
-  const analyzeUrl = `./?analyze=${encodeURIComponent(consultationText)}`;
+  // Persiapkan Link Jalur Tol yang lebih kuat untuk Cloud
+  const analyzeUrl = `?analyze=${encodeURIComponent(consultationText)}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative overflow-hidden">

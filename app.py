@@ -8,10 +8,9 @@ import glob
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
 
-# 1. Konfigurasi Halaman (Hapus Margin & Ruang Hitam)
+# 1. Konfigurasi Halaman
 st.set_page_config(page_title="EmosiKu - AI Assistant", layout="wide", initial_sidebar_state="collapsed")
 
-# Suntikan CSS agar dashboard memenuhi layar
 st.markdown("""
 <style>
     .block-container { padding: 4rem 0 0 0 !important; max-width: 100% !important; }
@@ -25,8 +24,7 @@ DIST_DIR = os.path.join(BASE_DIR, "frontend", "dist")
 
 @st.cache_resource
 def load_ai_engine():
-    # MENGGUNAKAN MODEL YANG SUDAH TERLATIH (FINE-TUNED) UNTUK SENTIMEN INDONESIA
-    # Model ini jauh lebih akurat untuk mendeteksi emosi bahagia/sedih
+    # Model RoBERTa Indonesia (Akurat & Cerdas)
     MODEL_NAME = "w11wo/indonesian-roberta-base-sentiment-classifier"
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
@@ -35,50 +33,31 @@ def load_ai_engine():
 
 def analyze_emotion(text):
     tokenizer, model, stopword_remover = load_ai_engine()
-    
-    # Preprocessing ringan
     text_clean = re.sub(r'http\S+|[^a-zA-Z\s]', '', str(text)).lower()
-    
-    # Tokenisasi
     inputs = tokenizer(text_clean, return_tensors="pt", truncation=True, padding=True, max_length=128)
-    
     with torch.no_grad():
         outputs = model(**inputs)
-    
-    # Model w11wo memiliki 3 label: 0: negative, 1: neutral, 2: positive
     probs = torch.softmax(outputs.logits, dim=-1)[0]
     pred = torch.argmax(probs).item()
-    
-    # Pemetaan Emosi ke Status Kesehatan Mental
-    # Label 2 (Positive) & 1 (Neutral) -> Stabil
-    # Label 0 (Negative) -> Terindikasi Gangguan
-    is_stable = pred != 0 
     confidence = int(probs[pred] * 100)
     
-    if pred == 2: # Positive
-        status = "Kondisi Sangat Stabil"
+    # 0: negative, 1: neutral, 2: positive
+    if pred == 2:
+        status, sentiment = "Kondisi Sangat Stabil", "positive"
         desc = "Luar biasa! Energi positif Anda sangat kuat. Pikiran Anda jernih dan penuh dengan kebahagiaan."
-        sentiment = "positive"
-        wellness, stress, energy = 95, 5, 90
-    elif pred == 1: # Neutral
-        status = "Kondisi Stabil"
+        w, s, e = 95, 5, 90
+    elif pred == 1:
+        status, sentiment = "Kondisi Stabil", "positive"
         desc = "Kondisi emosi Anda terpantau seimbang dan tenang. Anda memiliki kontrol yang baik atas pikiran Anda."
-        sentiment = "positive"
-        wellness, stress, energy = 75, 15, 70
-    else: # Negative
-        status = "Terindikasi Gangguan Psikologis"
-        desc = "AI mendeteksi adanya tekanan emosional atau kesedihan yang mendalam. Sangat disarankan untuk beristirahat atau berbicara dengan seseorang yang Anda percayai."
-        sentiment = "negative"
-        wellness, stress, energy = 30, 80, 40
+        w, s, e = 75, 15, 70
+    else:
+        status, sentiment = "Terindikasi Gangguan Psikologis", "negative"
+        desc = "AI mendeteksi adanya tekanan emosional atau kesedihan yang mendalam. Sangat disarankan untuk beristirahat atau berbicara dengan seseorang."
+        w, s, e = 30, 80, 40
 
     return {
-        "status": status,
-        "sentiment": sentiment,
-        "description": desc,
-        "wellness": wellness,
-        "stress": stress,
-        "clarity": confidence,
-        "energy": energy,
+        "status": status, "sentiment": sentiment, "description": desc,
+        "wellness": w, "stress": s, "clarity": confidence, "energy": e,
         "originalText": text
     }
 
@@ -101,22 +80,26 @@ def get_premium_ui(result=None):
         final_html = final_html.replace('</body>', f'<script type="module">{js_code.replace("</script>", "<\\/script>")}</script></body>')
         return final_html
     except Exception as e:
-        return f"<h3>Error loading UI: {str(e)}</h3>"
+        return f"<h3>Error: {str(e)}</h3>"
 
-# --- PENERIMA ANALISIS ---
-query_params = st.query_params
-if "analyze" in query_params:
-    text_to_analyze = query_params["analyze"]
+# --- LOGIKA PENERIMA (SANGAT KRUSIAL) ---
+if 'last_result' not in st.session_state:
+    st.session_state.last_result = None
+
+# Ambil query parameter
+q = st.query_params
+if "analyze" in q:
+    txt = q["analyze"]
+    # JANGAN LANGSUNG CLEAR. Simpan dulu ke session state.
+    st.session_state.last_result = analyze_emotion(txt)
+    # Clear query param agar tidak looping, lalu rerun
     st.query_params.clear()
-    with st.spinner("🧠 AI sedang menganalisis perasaan Anda..."):
-        st.session_state.current_result = analyze_emotion(text_to_analyze)
-        st.rerun()
+    st.rerun()
 
-if 'current_result' not in st.session_state:
-    st.session_state.current_result = None
-
-# --- TAMPILKAN DASHBOARD ---
-premium_html = get_premium_ui(st.session_state.current_result)
-st.session_state.current_result = None
+# Tampilkan UI
+premium_html = get_premium_ui(st.session_state.last_result)
+# Reset setelah UI dirender agar tidak muncul terus saat refresh biasa
+# Tapi jangan langsung None di sini jika ingin persistent. 
+# Kita biarkan saja, dia akan reset saat user klik tombol lagi.
 
 components.html(premium_html, height=1500, scrolling=True)
